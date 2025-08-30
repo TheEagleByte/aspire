@@ -16,7 +16,6 @@ using Aspire.Dashboard.Components;
 using Aspire.Dashboard.Components.Pages;
 using Aspire.Dashboard.Configuration;
 using Aspire.Dashboard.Mcp;
-using Aspire.Dashboard.McpTools;
 using Aspire.Dashboard.Model;
 using Aspire.Dashboard.Otlp;
 using Aspire.Dashboard.Otlp.Grpc;
@@ -254,10 +253,7 @@ public sealed class DashboardWebApplication : IAsyncDisposable
         // Host an in-process MCP server so the dashboard can expose MCP tools (resource listing, diagnostics).
         // Register the MCP server directly via the SDK.
 
-        builder.Services
-            .AddMcpServer()
-            .WithHttpTransport()
-            .WithTools<ResourceMcpTools>();
+        builder.Services.AddAspireMcpTools();
 
         builder.Services.TryAddScoped<DashboardCommandExecutor>();
 
