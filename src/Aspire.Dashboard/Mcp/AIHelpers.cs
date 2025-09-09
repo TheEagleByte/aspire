@@ -25,7 +25,6 @@ internal static class AIHelpers
     public const int StructuredLogsLimit = 200;
     public const int ConsoleLogsLimit = 500;
 
-    // There is currently a 64K token limit in VS.
     // Limit the result from individual token calls to a smaller number so multiple results can live inside the context.
     public const int MaximumListTokenLength = 8192;
 
@@ -56,7 +55,7 @@ internal static class AIHelpers
             name = context.AddValue(s.Name, id => $@"Duplicate of ""name"" for span {OtlpHelpers.ToShortenedId(id)}", s.SpanId),
             status = s.Status != OtlpSpanStatusCode.Unset ? s.Status.ToString() : null,
             status_message = context.AddValue(s.StatusMessage, id => $@"Duplicate of ""status_message"" for span {OtlpHelpers.ToShortenedId(id)}", s.SpanId),
-            // source = s.Source.Application.ApplicationKey.GetCompositeName(),
+            source = s.Source.Resource.ResourceKey.GetCompositeName(),
             destination = GetDestination(s, outgoingPeerResolvers),
             duration_ms = ConvertToMilliseconds(s.Duration),
             attributes = s.Attributes
@@ -280,7 +279,7 @@ internal static class AIHelpers
             trace_id = OtlpHelpers.ToShortenedId(l.TraceId),
             message = context.AddValue(l.Message, id => $@"Duplicate of ""message"" for log entry {id.InternalId}", l),
             severity = l.Severity.ToString(),
-            //resource_name = l.ApplicationView.Application.ApplicationKey.GetCompositeName(),
+            resource_name = l.ResourceView.Resource.ResourceKey.GetCompositeName(),
             attributes = l.Attributes
                 .Where(l => l.Key is not (OtlpLogEntry.ExceptionStackTraceField or OtlpLogEntry.ExceptionMessageField or OtlpLogEntry.ExceptionTypeField))
                 .ToDictionary(a => a.Key, a => context.AddValue(MapOtelAttributeValue(a), id => $@"Duplicate of attribute ""{id.Key}"" for log entry {id.InternalId}", (l.InternalId, a.Key))),

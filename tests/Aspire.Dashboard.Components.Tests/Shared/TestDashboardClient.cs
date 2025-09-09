@@ -131,4 +131,9 @@ public class TestDashboardClient : IDashboardClient
     {
         return null;
     }
+
+    public IReadOnlyList<ResourceViewModel> GetResources()
+    {
+        throw new NotImplementedException();
+    }
 }

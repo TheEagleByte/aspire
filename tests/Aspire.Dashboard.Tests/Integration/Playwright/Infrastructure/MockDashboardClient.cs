@@ -65,4 +65,9 @@ public sealed class MockDashboardClient : IDashboardClient
     {
         throw new NotImplementedException();
     }
+
+    public IReadOnlyList<ResourceViewModel> GetResources()
+    {
+        throw new NotImplementedException();
+    }
 }

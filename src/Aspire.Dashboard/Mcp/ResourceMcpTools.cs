@@ -225,7 +225,7 @@ internal sealed class ResourceMcpTools
         return consoleLogsData;
     }
 
-    [McpServerTool(Name = "aspire_list_commands"), Description("Lists the command names available for a resource.")]
+    [McpServerTool(Name = "aspire_list_commands"), Description("Lists the command names available for a resource. If a resource needs to be restarted and is currently stopped, use the start command instead.")]
     public static string GetResourceCommands(IDashboardClient dashboardClient, [Description("The resource name.")] string resourceName)
     {
         var resource = dashboardClient.GetResource(resourceName);
@@ -265,6 +265,11 @@ internal sealed class ResourceMcpTools
 
         if (command.State == Model.CommandViewModelState.Disabled)
         {
+            if (command.Name == "resource-restart" && resource.Commands.Any(c => c.Name == "resource-start" && c.State == CommandViewModelState.Enabled))
+            {
+                throw new McpException($"Resource '{resourceName}' is stopped. Use the 'resource-start' command instead of 'resource-restart'.", McpErrorCode.InvalidParams);
+            }
+
             throw new McpException($"Command '{commandName}' is currently disabled for resource '{resourceName}'.", McpErrorCode.InvalidParams);
         }
 
@@ -294,12 +299,12 @@ internal sealed class ResourceMcpTools
         }
     }
 
-    private bool TryResolveResourceNameForTelemetry([NotNullWhen(false)] string? resourceName, [NotNullWhen(false)] out string? message, out ResourceKey? applicationKey)
+    private bool TryResolveResourceNameForTelemetry([NotNullWhen(false)] string? resourceName, [NotNullWhen(false)] out string? message, out ResourceKey? resourceKey)
     {
         if (AIHelpers.IsMissingValue(resourceName))
         {
             message = null;
-            applicationKey = null;
+            resourceKey = null;
             return true;
         }
 
@@ -308,7 +313,7 @@ internal sealed class ResourceMcpTools
         if (!AIHelpers.TryGetResource(resources, resourceName, out var resource))
         {
             message = $"Unable to find a resource named '{resourceName}'.";
-            applicationKey = null;
+            resourceKey = null;
             return false;
         }
 
@@ -317,12 +322,12 @@ internal sealed class ResourceMcpTools
         if (apps.Count == 0)
         {
             message = $"Resource '{resourceName}' doesn't have any telemetry. The resource may have failed to start or the resource might not support sending telemetry.";
-            applicationKey = null;
+            resourceKey = null;
             return false;
         }
 
         message = null;
-        applicationKey = appKey;
+        resourceKey = appKey;
         return true;
     }
 
