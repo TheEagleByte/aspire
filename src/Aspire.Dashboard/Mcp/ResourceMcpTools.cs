@@ -134,7 +134,7 @@ internal sealed class ResourceMcpTools
         string traceId)
     {
         // Condition of filter should be contains because a substring of the traceId might be provided.
-        var traceIdFilter = new TelemetryFilter
+        var traceIdFilter = new FieldTelemetryFilter
         {
             Field = KnownStructuredLogFields.TraceIdField,
             Value = traceId,
