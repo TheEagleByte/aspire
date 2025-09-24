@@ -50,6 +50,34 @@ public class AzureContainerAppsTests
     }
 
     [Fact]
+    public async Task AzureProvisioningResourceHasTargetComputeResourceAnnotationForContainerApps()
+    {
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        builder.AddAzureContainerAppEnvironment("env");
+
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+
+        await ExecuteBeforeStartHooksAsync(app, default);
+
+        var model = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var container = Assert.Single(model.GetContainerResources());
+
+        container.TryGetLastAnnotation<DeploymentTargetAnnotation>(out var target);
+
+        var provisioningResource = target?.DeploymentTarget as AzureProvisioningResource;
+        Assert.NotNull(provisioningResource);
+
+        // Verify the provisioning resource has the back-pointer annotation
+        Assert.True(provisioningResource.TryGetLastAnnotation<TargetComputeResourceAnnotation>(out var backPointer));
+        Assert.NotNull(backPointer);
+        Assert.Same(container, backPointer.ComputeResource);
+    }
+
+    [Fact]
     public async Task AddDockerfileWithAppsInfrastructureAddsDeploymentTargetWithContainerAppToContainerResources()
     {
         var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
@@ -113,6 +141,36 @@ public class AzureContainerAppsTests
 
         await Verify(manifest.ToString(), "json")
               .AppendContentAsFile(bicep, "bicep");
+    }
+
+    [Fact]
+    public async Task AzureProvisioningResourceHasTargetComputeResourceAnnotationForContainerAppProjects()
+    {
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        builder.AddAzureContainerAppEnvironment("env");
+
+        builder.AddProject<Project>("api", launchProfileName: null)
+            .WithHttpEndpoint();
+
+        using var app = builder.Build();
+
+        await ExecuteBeforeStartHooksAsync(app, default);
+
+        var model = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var project = Assert.IsType<IComputeResource>(Assert.Single(model.GetProjectResources()), exactMatch: false);
+
+        var target = project.GetDeploymentTargetAnnotation();
+        Assert.NotNull(target);
+
+        var provisioningResource = target?.DeploymentTarget as AzureProvisioningResource;
+        Assert.NotNull(provisioningResource);
+
+        // Verify the provisioning resource has the back-pointer annotation
+        Assert.True(provisioningResource.TryGetLastAnnotation<TargetComputeResourceAnnotation>(out var backPointer));
+        Assert.NotNull(backPointer);
+        Assert.Same(project, backPointer.ComputeResource);
     }
 
     [Fact]
