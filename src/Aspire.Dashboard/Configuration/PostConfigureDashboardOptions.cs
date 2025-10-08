@@ -63,7 +63,7 @@ public sealed class PostConfigureDashboardOptions : IPostConfigureOptions<Dashbo
         {
             options.Frontend.AuthMode ??= FrontendAuthMode.BrowserToken;
             options.Otlp.AuthMode ??= OtlpAuthMode.Unsecured;
-            options.Mcp.AuthMode ??= McpAuthMode.ApiKey;
+            options.Mcp.AuthMode ??= McpAuthMode.Unsecured;
         }
 
         if (options.Frontend.AuthMode == FrontendAuthMode.BrowserToken && string.IsNullOrEmpty(options.Frontend.BrowserToken))
@@ -75,5 +75,7 @@ public sealed class PostConfigureDashboardOptions : IPostConfigureOptions<Dashbo
             _configuration[DashboardConfigNames.DashboardFrontendBrowserTokenName.ConfigKey] = token;
             options.Frontend.BrowserToken = token;
         }
+
+        options.AI.Disabled = _configuration.GetBool(DashboardConfigNames.DashboardAIDisabledName.ConfigKey);
     }
 }

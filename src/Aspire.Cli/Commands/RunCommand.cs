@@ -71,10 +71,6 @@ internal sealed class RunCommand : BaseCommand
         projectOption.Description = RunCommandStrings.ProjectArgumentDescription;
         Options.Add(projectOption);
 
-        var watchOption = new Option<bool>("--watch", "-w");
-        watchOption.Description = RunCommandStrings.WatchArgumentDescription;
-        Options.Add(watchOption);
-
         if (ExtensionHelper.IsExtensionHost(InteractionService, out _, out _))
         {
             var startDebugOption = new Option<bool>("--start-debug-session");
@@ -144,7 +140,7 @@ internal sealed class RunCommand : BaseCommand
 
             await _certificateService.EnsureCertificatesTrustedAsync(_runner, cancellationToken);
 
-            var watch = parseResult.GetValue<bool>("--watch") || (isExtensionHost && !startDebugSession);
+            var watch = !isSingleFileAppHost && (_features.IsFeatureEnabled(KnownFeatures.DefaultWatchEnabled, defaultValue: false) || (isExtensionHost && !startDebugSession));
 
             if (!watch)
             {
@@ -191,7 +187,8 @@ internal sealed class RunCommand : BaseCommand
             {
                 StandardOutputCallback = runOutputCollector.AppendOutput,
                 StandardErrorCallback = runOutputCollector.AppendError,
-                StartDebugSession = startDebugSession
+                StartDebugSession = startDebugSession,
+                Debug = debug
             };
 
             var backchannelCompletitionSource = new TaskCompletionSource<IAppHostBackchannel>();

@@ -33,7 +33,7 @@ export const debugProject = (projectName: string) => localize('aspire-vscode.str
 export const watchProject = (projectName: string, projectType: string) => localize('aspire-vscode.strings.watchProject', 'Watch {0} ({1})', projectName, projectType);
 export const noCsharpBuildTask = localize('aspire-vscode.strings.noCsharpBuildTask', 'No C# Dev Kit build task found.');
 export const noWatchTask = localize('aspire-vscode.strings.noWatchTask', 'No watch task found. Please ensure a watch task is defined in your workspace.');
-export const buildFailedWithExitCode = (exitCode: number) => localize('aspire-vscode.strings.buildFailedWithExitCode', 'Build failed with exit code {0}.', exitCode);
+export const buildFailedWithExitCode = (exitCode: number | string) => localize('aspire-vscode.strings.buildFailedWithExitCode', 'Build failed with exit code {0}.', exitCode);
 export const noOutputFromMsbuild = localize('aspire-vscode.strings.noOutputFromMsbuild', 'No output from msbuild.');
 export const failedToGetTargetPath = (err: string) => localize('aspire-vscode.strings.failedToGetTargetPath', 'Failed to get TargetPath: {0}.', err);
 export const unsupportedResourceType = (type: string) => localize('aspire-vscode.strings.unsupportedResourceType', 'Attempted to start unsupported resource type: {0}.', type);
@@ -57,3 +57,4 @@ export const defaultConfigurationName = localize('extension.debug.defaultConfigu
 export const debugSessionAlreadyExists = (id: string) => localize('aspire-vscode.strings.debugSessionAlreadyExists', 'A debug session is already active for id {0}.', id);
 export const processExceptionOccurred = (error: string, command: string) => localize('aspire-vscode.strings.processExceptionOccurred', 'Encountered an exception ({0}) while running the following command: {1}.', error, command);
 export const failedToStartDebugSession = localize('aspire-vscode.strings.failedToStartDebugSession', 'Failed to start debug session.');
+export const invalidLaunchConfiguration = (projectPath: string) => localize('aspire-vscode.strings.invalidLaunchConfiguration', 'Invalid launch configuration for {0}.', projectPath);

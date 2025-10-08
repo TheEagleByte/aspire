@@ -5,6 +5,7 @@ using Aspire.Dashboard.Components.Dialogs;
 using Aspire.Dashboard.Components.Pages;
 using Aspire.Dashboard.Configuration;
 using Aspire.Dashboard.Model;
+using Aspire.Dashboard.Model.Assistant;
 using Aspire.Dashboard.Utils;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
@@ -25,7 +26,7 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
     private DotNetObjectReference<ShortcutManager>? _shortcutManagerReference;
     private DotNetObjectReference<MainLayout>? _layoutReference;
     private IDialogReference? _openPageDialog;
-
+    private IDisposable? _aiDisplayChangedSubscription;
     private const string SettingsDialogId = "SettingsDialog";
     private const string HelpDialogId = "HelpDialog";
     private const string McpDialogId = "McpServerDialog";
@@ -49,6 +50,9 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
     public required IStringLocalizer<Resources.Dialogs> DialogsLoc { get; init; }
 
     [Inject]
+    public required IStringLocalizer<Resources.AIAssistant> AIAssistantLoc { get; init; }
+
+    [Inject]
     public required IDialogService DialogService { get; init; }
 
     [Inject]
@@ -68,6 +72,12 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
 
     [Inject]
     public required ILocalStorage LocalStorage { get; init; }
+
+    [Inject]
+    public required IServiceProvider ServiceProvider { get; init; }
+
+    [Inject]
+    public required IAIContextProvider AIContextProvider { get; init; }
 
     [CascadingParameter]
     public required ViewportInformation ViewportInformation { get; set; }
@@ -106,7 +116,7 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
         TimeProvider.SetBrowserTimeZone(result.TimeZone);
         TelemetryContextProvider.SetBrowserUserAgent(result.UserAgent);
 
-        if (Options.CurrentValue.Otlp.AuthMode == OtlpAuthMode.Unsecured)
+        if (Options.CurrentValue.Otlp.AuthMode == OtlpAuthMode.Unsecured && !Options.CurrentValue.Otlp.SuppressUnsecuredTelemetryMessage)
         {
             var dismissedResult = await LocalStorage.GetUnprotectedAsync<bool>(BrowserStorageKeys.UnsecuredTelemetryMessageDismissedKey);
             var skipMessage = dismissedResult.Success && dismissedResult.Value;
@@ -165,6 +175,8 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
                 });
             }
         }
+
+        _aiDisplayChangedSubscription = AIContextProvider.OnDisplayChanged(() => InvokeAsync(StateHasChanged));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -294,6 +306,32 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
         }
     }
 
+    public async Task LaunchAssistantAsync()
+    {
+        if (AIContextProvider.AssistantChatViewModel != null && AIContextProvider.ShowAssistantSidebarDialog)
+        {
+            await AIContextProvider.HideAssistantSidebarAsync();
+        }
+        else
+        {
+            var viewModel = ServiceProvider.GetRequiredService<AssistantChatViewModel>();
+            var initializeTask = AIContextProvider.ChatState is { } state
+                ? viewModel.InitializeWithPreviousStateAsync(state)
+                : viewModel.InitializeAsync();
+
+            if (ViewportInformation.IsDesktop)
+            {
+                await AIContextProvider.LaunchAssistantSidebarAsync(viewModel);
+            }
+            else
+            {
+                await AIContextProvider.LaunchAssistantModelDialogAsync(viewModel);
+            }
+
+            await initializeTask;
+        }
+    }
+
     public IReadOnlySet<AspireKeyboardShortcut> SubscribedShortcuts { get; } = new HashSet<AspireKeyboardShortcut>
     {
         AspireKeyboardShortcut.Help,
@@ -346,6 +384,7 @@ public partial class MainLayout : IGlobalKeydownListener, IAsyncDisposable
         _themeChangedSubscription?.Dispose();
         _locationChangingRegistration?.Dispose();
         ShortcutManager.RemoveGlobalKeydownListener(this);
+        _aiDisplayChangedSubscription?.Dispose();
 
         try
         {

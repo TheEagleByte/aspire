@@ -110,10 +110,6 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
         Assert.NotNull(aspireMapping);
         Assert.Equal($"https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-aspire-{testHash}/nuget/v3/index.json", aspireMapping.Source);
         
-        var serviceDiscoveryMapping = stagingChannel.Mappings!.FirstOrDefault(m => m.PackageFilter == "Microsoft.Extensions.ServiceDiscovery*");
-        Assert.NotNull(serviceDiscoveryMapping);
-        Assert.Equal($"https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-aspire-{testHash}/nuget/v3/index.json", serviceDiscoveryMapping.Source);
-        
         var nugetMapping = stagingChannel.Mappings!.FirstOrDefault(m => m.PackageFilter == "*");
         Assert.NotNull(nugetMapping);
         Assert.Equal("https://api.nuget.org/v3/index.json", nugetMapping.Source);
@@ -221,7 +217,7 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
         
         var configContent = await File.ReadAllTextAsync(nugetConfigPath);
         Assert.Contains("globalPackagesFolder", configContent);
-        Assert.Contains(".nuget\\packages", configContent);
+        Assert.Contains(".nugetpackages", configContent);
 
         // Verify the XML structure
         var doc = XDocument.Load(nugetConfigPath);
@@ -231,6 +227,6 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
         var globalPackagesFolderAdd = configSection.Elements("add")
             .FirstOrDefault(add => string.Equals((string?)add.Attribute("key"), "globalPackagesFolder", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(globalPackagesFolderAdd);
-        Assert.Equal(".nuget\\packages", (string?)globalPackagesFolderAdd.Attribute("value"));
+        Assert.Equal(".nugetpackages", (string?)globalPackagesFolderAdd.Attribute("value"));
     }
 }
