@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.Tests;
 
+[Collection("WaitForTests")]
 public class WaitForTests(ITestOutputHelper testOutputHelper)
 {
     [Fact]

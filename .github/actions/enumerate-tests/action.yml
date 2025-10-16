@@ -17,6 +17,9 @@ outputs:
   templates_tests_matrix:
     description: Templates tests matrix
     value: ${{ steps.generate_templates_matrix.outputs.templates_tests_matrix }}
+  split_tests_matrix:
+    description: Split tests matrix (for collection/class-based splitting)
+    value: ${{ steps.generate_split_tests_matrix.outputs.split_tests_matrix }}
 runs:
   using: "composite"
   steps:
@@ -35,7 +38,9 @@ runs:
         dotnet build ${{ github.workspace }}/tests/Shared/GetTestProjects.proj
         /bl:${{ github.workspace }}/artifacts/log/Debug/GetTestProjects.binlog
         /p:TestsListOutputPath=${{ github.workspace }}/artifacts/TestsForGithubActions.list
+        /p:TestMatrixOutputPath=${{ github.workspace }}/artifacts/test-matrices/
         /p:ContinuousIntegrationBuild=true
+        /p:BuildOs=${{ runner.os == 'Linux' && 'linux' || runner.os == 'macOS' && 'darwin' || 'windows' }}
 
     - name: Generate list of template tests
       if: ${{ inputs.includeTemplates }}
@@ -82,6 +87,25 @@ runs:
         $jsonString = ConvertTo-Json $jsonObject -Compress
         "templates_tests_matrix=$jsonString"
         "templates_tests_matrix=$jsonString" | Out-File -FilePath $env:GITHUB_OUTPUT
+
+    - name: Generate split tests matrix
+      id: generate_split_tests_matrix
+      if: ${{ inputs.includeIntegrations }}
+      shell: pwsh
+      run: |
+        $matrixFilePath = "${{ github.workspace }}/artifacts/test-matrices/split-tests-matrix.json"
+        if (Test-Path $matrixFilePath) {
+          $matrixContent = Get-Content -Raw $matrixFilePath
+          # Validate it's valid JSON
+          $null = $matrixContent | ConvertFrom-Json
+          "split_tests_matrix=$matrixContent" | Out-File -FilePath $env:GITHUB_OUTPUT
+          Write-Host "Split tests matrix generated successfully"
+        } else {
+          # Empty matrix if no split tests
+          $emptyMatrix = '{"include":[]}'
+          "split_tests_matrix=$emptyMatrix" | Out-File -FilePath $env:GITHUB_OUTPUT
+          Write-Host "No split tests matrix found, using empty matrix"
+        }
 
     - name: Upload logs
       if: always()
