@@ -30,6 +30,7 @@ using System.Security.Cryptography.X509Certificates;
 namespace Aspire.Hosting.Tests;
 
 [Collection("DistributedApplicationTests")]
+[Trait("Partition", "DistributedApplicationTests")]
 public class DistributedApplicationTests
 {
     private readonly ITestOutputHelper _testOutputHelper;

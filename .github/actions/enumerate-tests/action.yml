@@ -78,7 +78,10 @@ runs:
 
         $prefix = "Aspire.Templates.Tests."
         $lines = Get-Content $inputFilePath | ForEach-Object {
-            $_ -replace "^$prefix", ""
+            # Strip "class:" or "collection:" prefix first
+            $line = $_ -replace "^(class|collection|uncollected):", ""
+            # Then strip the test class prefix
+            $line -replace "^$prefix", ""
         }
 
         $jsonObject = @{

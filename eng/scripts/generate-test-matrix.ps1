@@ -81,7 +81,7 @@ function New-EntryCollection($c,$meta) {
     name = $c
     shortname = "Collection_$c"
     testProjectPath = $meta.testProjectPath
-    filterArg = "--filter-collection `"$c`""
+    filterArg = "--filter-trait `"Partition=$c`""
     requiresNugets = ($meta.requiresNugets -eq 'true')
     requiresTestSdk = ($meta.requiresTestSdk -eq 'true')
     enablePlaywrightInstall = ($meta.enablePlaywrightInstall -eq 'true')
@@ -93,7 +93,7 @@ function New-EntryCollection($c,$meta) {
 function New-EntryUncollected($collections,$meta) {
   $filters = @()
   foreach ($c in $collections) {
-    $filters += "--filter-not-collection `"$c`""
+    $filters += "--filter-not-trait `"Partition=$c`""
   }
   [ordered]@{
     type = 'uncollected'
