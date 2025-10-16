@@ -37,9 +37,9 @@
                   Overwrite="true" />
   </Target>
 
-  <!-- Used for running one helix job per test class -->
+  <!-- Used for running one helix job per test class (legacy mechanism) -->
   <Target Name="ExtractTestClassNames"
-          Condition=" '$(IsTestProject)' == 'true' and '$(ExtractTestClassNamesForHelix)' == 'true' and '$(PrepareForHelix)' == 'true' and '$(IsTestUtilityProject)' != 'true'"
+          Condition=" '$(IsTestProject)' == 'true' and '$(ExtractTestClassNamesForHelix)' == 'true' and '$(SplitTestsOnCI)' != 'true' and '$(PrepareForHelix)' == 'true' and '$(IsTestUtilityProject)' != 'true'"
           BeforeTargets="ZipTestArchive">
 
     <Error Condition="'$(ExtractTestClassNamesPrefix)' == ''"
@@ -68,11 +68,115 @@
                       Overwrite="true" />
   </Target>
 
+  <!-- Enhanced test splitting with auto-detection (v3) -->
+  <Target Name="ExtractTestClassNamesV3"
+          Condition=" '$(IsTestProject)' == 'true' and '$(SplitTestsOnCI)' == 'true' and '$(PrepareForHelix)' == 'true' and '$(IsTestUtilityProject)' != 'true'"
+          BeforeTargets="ZipTestArchive">
+
+    <Error Condition="'$(TestClassNamesPrefix)' == ''"
+           Text="%24(TestClassNamesPrefix) must be set when SplitTestsOnCI=true. Example: -p:TestClassNamesPrefix=Aspire.Hosting.Tests" />
+
+    <Message Text="[$(MSBuildProjectName)] Starting test metadata extraction (v3 auto-detection)..." Importance="High" />
+
+    <!-- Run test assembly to list all tests -->
+    <Exec Command="&quot;$(RunCommand)&quot; --filter-not-trait category=failing --list-tests" 
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="false">
+      <Output TaskParameter="ConsoleOutput" ItemName="_TestAssemblyOutput" />
+    </Exec>
+
+    <PropertyGroup>
+      <!-- Path to discovery helper script -->
+      <_DiscoveryScriptPath>$(RepoRoot)eng\scripts\extract-test-metadata.ps1</_DiscoveryScriptPath>
+      
+      <!-- Output files -->
+      <_TestListFile>$(TestArchiveTestsDir)$(MSBuildProjectName).tests.list</_TestListFile>
+      <_MetadataFile>$(TestArchiveTestsDir)$(MSBuildProjectName).tests.metadata.json</_MetadataFile>
+      
+      <!-- Normalize path separators for cross-platform compatibility -->
+      <_RelativeProjectPath>$(MSBuildProjectDirectory.Replace('$(RepoRoot)', ''))</_RelativeProjectPath>
+      <_RelativeProjectPath>$(_RelativeProjectPath.Replace('\', '/'))</_RelativeProjectPath>
+      
+      <!-- Collections to skip (if any) -->
+      <_CollectionsToSkip Condition="'$(TestCollectionsToSkipSplitting)' != ''">$(TestCollectionsToSkipSplitting)</_CollectionsToSkip>
+      <_CollectionsToSkip Condition="'$(TestCollectionsToSkipSplitting)' == ''"></_CollectionsToSkip>
+    </PropertyGroup>
+
+    <!-- Ensure output directory exists -->
+    <MakeDir Directories="$(TestArchiveTestsDir)" />
+
+    <!-- Create temporary file with test assembly output -->
+    <PropertyGroup>
+      <_TempOutputFile>$(TestArchiveTestsDir)$(MSBuildProjectName).tests.output.tmp</_TempOutputFile>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_TempOutputFile)"
+                      Lines="@(_TestAssemblyOutput)"
+                      Overwrite="true" />
+
+    <!-- Write initial metadata file for the script to update -->
+    <ItemGroup>
+      <_InitialMetadataLines Include="{" />
+      <_InitialMetadataLines Include="  &quot;projectName&quot;: &quot;$(MSBuildProjectName)&quot;," />
+      <_InitialMetadataLines Include="  &quot;testClassNamesPrefix&quot;: &quot;$(TestClassNamesPrefix)&quot;," />
+      <_InitialMetadataLines Include="  &quot;testProjectPath&quot;: &quot;$(_RelativeProjectPath)/$(MSBuildProjectFile)&quot;," />
+      <_InitialMetadataLines Include="  &quot;requiresNugets&quot;: &quot;$(RequiresNugetsForSplitTests)&quot;," />
+      <_InitialMetadataLines Include="  &quot;requiresTestSdk&quot;: &quot;$(RequiresTestSdkForSplitTests)&quot;," />
+      <_InitialMetadataLines Include="  &quot;testSessionTimeout&quot;: &quot;$(SplitTestSessionTimeout)&quot;," />
+      <_InitialMetadataLines Include="  &quot;testHangTimeout&quot;: &quot;$(SplitTestHangTimeout)&quot;," />
+      <_InitialMetadataLines Include="  &quot;uncollectedTestsSessionTimeout&quot;: &quot;$(UncollectedTestsSessionTimeout)&quot;," />
+      <_InitialMetadataLines Include="  &quot;uncollectedTestsHangTimeout&quot;: &quot;$(UncollectedTestsHangTimeout)&quot;," />
+      <_InitialMetadataLines Include="  &quot;enablePlaywrightInstall&quot;: &quot;$(EnablePlaywrightInstallForSplitTests)&quot;" />
+      <_InitialMetadataLines Include="}" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(_MetadataFile)"
+                      Lines="@(_InitialMetadataLines)"
+                      Overwrite="true" />
+
+    <!-- Call PowerShell discovery helper -->
+    <Message Text="[$(MSBuildProjectName)] Running discovery helper..." Importance="High" />
+    
+    <PropertyGroup>
+      <_PwshCommand>pwsh</_PwshCommand>
+      <_PwshCommand Condition="'$(OS)' == 'Windows_NT'">powershell</_PwshCommand>
+      <_DiscoveryCommand>$(_PwshCommand) -NoProfile -ExecutionPolicy Bypass -File &quot;$(_DiscoveryScriptPath)&quot;</_DiscoveryCommand>
+      <_DiscoveryCommand>$(_DiscoveryCommand) -TestAssemblyOutputFile &quot;$(_TempOutputFile)&quot;</_DiscoveryCommand>
+      <_DiscoveryCommand>$(_DiscoveryCommand) -TestClassNamesPrefix &quot;$(TestClassNamesPrefix)&quot;</_DiscoveryCommand>
+      <_DiscoveryCommand Condition="'$(_CollectionsToSkip)' != ''">$(_DiscoveryCommand) -TestCollectionsToSkip &quot;$(_CollectionsToSkip)&quot;</_DiscoveryCommand>
+      <_DiscoveryCommand>$(_DiscoveryCommand) -OutputListFile &quot;$(_TestListFile)&quot;</_DiscoveryCommand>
+      <_DiscoveryCommand>$(_DiscoveryCommand) -MetadataJsonFile &quot;$(_MetadataFile)&quot;</_DiscoveryCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(_DiscoveryCommand)" 
+          IgnoreExitCode="false" 
+          WorkingDirectory="$(RepoRoot)" />
+
+    <!-- Clean up temp file -->
+    <Delete Files="$(_TempOutputFile)" />
+
+    <!-- Verify output file was created -->
+    <Error Condition="!Exists('$(_TestListFile)')"
+           Text="Discovery helper failed to generate test list file: $(_TestListFile)" />
+
+    <Message Text="[$(MSBuildProjectName)] ✅ Test metadata extraction complete!" Importance="High" />
+    <Message Text="[$(MSBuildProjectName)] Files: $(_TestListFile), $(_MetadataFile)" Importance="High" />
+  </Target>
+
   <Target Name="GetRunTestsOnGithubActions" Returns="@(TestProject)">
     <ItemGroup>
-      <TestProject Condition="'$(BuildOs)' == 'windows'" Include="$(MSBuildProjectFullPath)" RunTestsOnGithubActions="$(RunOnGithubActionsWindows)" />
-      <TestProject Condition="'$(BuildOs)' == 'linux'" Include="$(MSBuildProjectFullPath)" RunTestsOnGithubActions="$(RunOnGithubActionsLinux)" />
-      <TestProject Condition="'$(BuildOs)' == 'darwin'" Include="$(MSBuildProjectFullPath)" RunTestsOnGithubActions="$(RunOnGithubActionsMacOS)" />
+      <TestProject Condition="'$(BuildOs)' == 'windows'" 
+                   Include="$(MSBuildProjectFullPath)" 
+                   RunTestsOnGithubActions="$(RunOnGithubActionsWindows)" 
+                   SplitTests="$(SplitTestsOnCI)" />
+      <TestProject Condition="'$(BuildOs)' == 'linux'" 
+                   Include="$(MSBuildProjectFullPath)" 
+                   RunTestsOnGithubActions="$(RunOnGithubActionsLinux)" 
+                   SplitTests="$(SplitTestsOnCI)" />
+      <TestProject Condition="'$(BuildOs)' == 'darwin'" 
+                   Include="$(MSBuildProjectFullPath)" 
+                   RunTestsOnGithubActions="$(RunOnGithubActionsMacOS)" 
+                   SplitTests="$(SplitTestsOnCI)" />
     </ItemGroup>
   </Target>
 

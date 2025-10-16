@@ -69,7 +69,7 @@ function Read-Metadata($file, $projectName) {
       $defaults[$k] = $json.$k
     }
   } catch {
-    Write-Warning "Failed parsing metadata for $projectName: $_"
+    Write-Warning "Failed parsing metadata for ${projectName}: $_"
   }
   return $defaults
 }
@@ -137,7 +137,7 @@ if (-not (Test-Path $TestListsDirectory)) {
   exit 0
 }
 
-$listFiles = Get-ChildItem -Path $TestListsDirectory -Filter '*.tests.list' -ErrorAction SilentlyContinue
+$listFiles = @(Get-ChildItem -Path $TestListsDirectory -Filter '*.tests.list' -Recurse -ErrorAction SilentlyContinue)
 if ($listFiles.Count -eq 0) {
   $empty = @{ include = @() }
   New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
@@ -149,9 +149,9 @@ if ($listFiles.Count -eq 0) {
 $entries = [System.Collections.Generic.List[object]]::new()
 
 foreach ($lf in $listFiles) {
-  $baseName = [System.IO.Path]::GetFileNameWithoutExtension($lf.Name -replace '\.tests$','')
-  $projectName = $baseName
-  $lines = Get-Content $lf.FullName | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
+  $fileName = $lf.Name -replace '\.tests\.list$',''
+  $projectName = $fileName
+  $lines = @(Get-Content $lf.FullName | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) })
   $metadataPath = ($lf.FullName -replace '\.tests\.list$', '.tests.metadata.json')
   $meta = Read-Metadata $metadataPath $projectName
   if ($lines.Count -eq 0) { continue }

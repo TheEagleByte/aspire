@@ -67,7 +67,7 @@ $collections = [System.Collections.Generic.HashSet[string]]::new()
 $classes     = [System.Collections.Generic.HashSet[string]]::new()
 
 $collectionBannerRegex = '^\s*Collection:\s*(.+)$'
-$classRegex            = "^\s*$([Regex]::Escape($TestClassNamesPrefix))\.[^\(]+$"
+$classNamePattern      = '^(\s*)' + [Regex]::Escape($TestClassNamesPrefix) + '\.([^\.]+)\.'
 
 foreach ($line in $raw) {
   if ($line -match $collectionBannerRegex) {
@@ -75,12 +75,11 @@ foreach ($line in $raw) {
     if ($c) { $collections.Add($c) | Out-Null }
     continue
   }
-  if ($line -match $classRegex) {
-    # The line is like Namespace.ClassName.MethodName
-    # Reduce to Namespace.ClassName
-    if ($line -match '^(' + [Regex]::Escape($TestClassNamesPrefix) + '\.[^\.]+)\.') {
-      $classes.Add($Matches[1]) | Out-Null
-    }
+  # Extract class name from test name
+  # Format: "  Namespace.ClassName.MethodName(...)" or "Namespace.ClassName.MethodName"
+  if ($line -match $classNamePattern) {
+    $className = "$TestClassNamesPrefix.$($Matches[2])"
+    $classes.Add($className) | Out-Null
   }
 }
 
@@ -89,7 +88,7 @@ if ($TestCollectionsToSkip) {
   $skipList = $TestCollectionsToSkip -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
 
-$filteredCollections = $collections | Where-Object { $skipList -notcontains $_ }
+$filteredCollections = @($collections | Where-Object { $skipList -notcontains $_ })
 
 $mode = if ($filteredCollections.Count -gt 0) { 'collection' } else { 'class' }
 
@@ -120,10 +119,11 @@ $lines | Set-Content -Path $OutputListFile -Encoding UTF8
 if ($MetadataJsonFile -and (Test-Path $MetadataJsonFile)) {
   try {
     $meta = Get-Content -Raw -Path $MetadataJsonFile | ConvertFrom-Json
-    $meta.mode = $mode
-    $meta.collections = ($filteredCollections | Sort-Object)
-    $meta.classCount = $classes.Count
-    $meta.collectionCount = $filteredCollections.Count
+    # Add or update properties
+    $meta | Add-Member -Force -MemberType NoteProperty -Name 'mode' -Value $mode
+    $meta | Add-Member -Force -MemberType NoteProperty -Name 'collections' -Value @($filteredCollections | Sort-Object)
+    $meta | Add-Member -Force -MemberType NoteProperty -Name 'classCount' -Value $classes.Count
+    $meta | Add-Member -Force -MemberType NoteProperty -Name 'collectionCount' -Value $filteredCollections.Count
     $meta | ConvertTo-Json -Depth 20 | Set-Content -Path $MetadataJsonFile -Encoding UTF8
   } catch {
     Write-Warning "Failed updating metadata JSON: $_"

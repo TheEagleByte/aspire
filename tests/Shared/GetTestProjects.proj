@@ -4,15 +4,17 @@
     It emits "shortnames" for the project which is essentially the project name with `Aspire.` prefix
     `.Tests` removed.
 
-    Input: $(TestsListOutputPath) -->
+    Input: $(TestsListOutputPath)
+    Optional: $(TestMatrixOutputPath) - if set, generates split test matrices -->
 
-  <Target Name="GenerateListOfTestsForGithubActions">
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
+  </PropertyGroup>
+
+  <Target Name="GenerateListOfTestsForGithubActions"
+          DependsOnTargets="GenerateSplitTestsMatrix">
     <Error Condition="'$(TestsListOutputPath)' == ''"
            Text="%24(TestsListOutputPath) is unset" />
-
-    <PropertyGroup>
-      <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
-    </PropertyGroup>
 
     <ItemGroup>
       <_TestProjectsToExclude Include="$(RepoRoot)tests\Shared\**\*Tests.csproj" />
@@ -36,13 +38,50 @@
     <ItemGroup>
       <ProjectRunTestsOnGithubActions Remove="@(ProjectRunTestsOnGithubActions)" Condition="'%(RunTestsOnGithubActions)' != 'true'" />
       <ProjectRunTestsOnGithubActions ShortName="$([System.IO.Path]::GetFileNameWithoutExtension('%(Identity)').Replace('Aspire.', '').Replace('.Tests', ''))" />
+      
+      <!-- Separate split test projects from regular ones -->
+      <SplitTestProjects Include="@(ProjectRunTestsOnGithubActions)" Condition="'%(SplitTests)' == 'true'" />
+      <RegularTestProjects Include="@(ProjectRunTestsOnGithubActions)" Condition="'%(SplitTests)' != 'true'" />
     </ItemGroup>
 
     <Error Condition="@(ProjectRunTestsOnGithubActions->Count()) == 0" Text="Could not find any test projects" />
 
     <WriteLinesToFile File="$(TestsListOutputPath)"
-                      Lines="@(ProjectRunTestsOnGithubActions->'%(ShortName)')"
+                      Lines="@(RegularTestProjects->'%(ShortName)')"
                       Overwrite="true" />
+    
+    <!-- Write separate list for split test projects -->
+    <WriteLinesToFile File="$(TestsListOutputPath).split-projects"
+                      Lines="@(SplitTestProjects->'%(ShortName)')"
+                      Overwrite="true"
+                      Condition="'@(SplitTestProjects->Count())' &gt; 0" />
+  </Target>
+
+  <Target Name="GenerateSplitTestsMatrix"
+          Condition="'$(TestMatrixOutputPath)' != ''">
+    <PropertyGroup>
+      <_TestListsDir>$([MSBuild]::NormalizeDirectory($(ArtifactsDir), 'helix'))</_TestListsDir>
+      <_BuildOs Condition="'$(BuildOs)' == ''">unknown</_BuildOs>
+      <_BuildOs Condition="'$(BuildOs)' != ''">$(BuildOs)</_BuildOs>
+    </PropertyGroup>
+    
+    <Message Text="Generating split tests matrix from $(_TestListsDir) to $(TestMatrixOutputPath)" Importance="High" />
+    
+    <!-- Call PowerShell matrix generator -->
+    <PropertyGroup>
+      <_PwshCommand>pwsh</_PwshCommand>
+      <_PwshCommand Condition="'$(OS)' == 'Windows_NT'">powershell</_PwshCommand>
+      <_MatrixScriptPath>$([MSBuild]::NormalizePath($(RepoRoot), 'eng', 'scripts', 'generate-test-matrix.ps1'))</_MatrixScriptPath>
+      <_MatrixCommand>$(_PwshCommand) -NoProfile -ExecutionPolicy Bypass -File &quot;$(_MatrixScriptPath)&quot;</_MatrixCommand>
+      <_MatrixCommand>$(_MatrixCommand) -TestListsDirectory &quot;$(_TestListsDir)&quot;</_MatrixCommand>
+      <_MatrixCommand>$(_MatrixCommand) -OutputDirectory &quot;$(TestMatrixOutputPath)&quot;</_MatrixCommand>
+      <_MatrixCommand>$(_MatrixCommand) -BuildOs &quot;$(_BuildOs)&quot;</_MatrixCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(_MatrixCommand)" 
+          IgnoreExitCode="false" 
+          WorkingDirectory="$(RepoRoot)" 
+          Condition="Exists('$(_TestListsDir)')" />
   </Target>
 
 </Project>
