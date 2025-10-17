@@ -50,7 +50,8 @@ foreach ($file in $enumerationFiles) {
             if ($content.splitTests -eq 'true') {
                 $splitTestProjects += $content.shortName
             } else {
-                $regularTestProjects += $content.shortName
+                # Store full enumeration data for regular tests
+                $regularTestProjects += $content
             }
             Write-Host "  Included: $($content.shortName) (Split: $($content.splitTests))"
         } else {
@@ -71,8 +72,12 @@ if (-not (Test-Path $outputDir)) {
     New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
 }
 
-# Write regular test projects list
-$regularTestProjects | Set-Content $TestsListOutputPath
+# Write regular test projects list as JSON for matrix generation
+if ($regularTestProjects.Count -gt 0) {
+    $regularTestProjects | ConvertTo-Json -Depth 10 | Set-Content "$TestsListOutputPath.json"
+}
+# Also write just the short names for backward compatibility
+$regularTestProjects | ForEach-Object { $_.shortName } | Set-Content $TestsListOutputPath
 
 # Write split test projects list if any exist
 if ($splitTestProjects.Count -gt 0) {

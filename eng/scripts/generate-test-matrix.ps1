@@ -201,10 +201,37 @@ foreach ($lf in $listFiles) {
 
 # Add regular (non-split) test projects if provided
 if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
-  $regularProjects = @(Get-Content $RegularTestProjectsFile | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) })
-  Write-Host "Adding $($regularProjects.Count) regular test project(s)"
-  foreach ($shortName in $regularProjects) {
-    $entries.Add( (New-EntryRegular $shortName) ) | Out-Null
+  # Check if JSON file exists with full metadata
+  $jsonFile = "$RegularTestProjectsFile.json"
+  if (Test-Path $jsonFile) {
+    $regularProjectsData = Get-Content -Raw $jsonFile | ConvertFrom-Json
+    if ($regularProjectsData -isnot [Array]) {
+      $regularProjectsData = @($regularProjectsData)
+    }
+    Write-Host "Adding $($regularProjectsData.Count) regular test project(s) from JSON"
+    foreach ($proj in $regularProjectsData) {
+      $entry = [ordered]@{
+        type = 'regular'
+        projectName = $proj.project
+        name = $proj.shortName
+        shortname = $proj.shortName
+        testProjectPath = $proj.fullPath
+        extraTestArgs = ""
+        requiresNugets = $false
+        requiresTestSdk = $false
+        enablePlaywrightInstall = $false
+        testSessionTimeout = '20m'
+        testHangTimeout = '10m'
+      }
+      $entries.Add($entry) | Out-Null
+    }
+  } else {
+    # Fallback to old behavior for backward compatibility
+    $regularProjects = @(Get-Content $RegularTestProjectsFile | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) })
+    Write-Host "Adding $($regularProjects.Count) regular test project(s) (legacy mode)"
+    foreach ($shortName in $regularProjects) {
+      $entries.Add( (New-EntryRegular $shortName) ) | Out-Null
+    }
   }
 }
 
