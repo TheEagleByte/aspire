@@ -124,7 +124,7 @@
 
     <!-- Log what we're doing -->
     <Message Text="Generated test enumeration for $(MSBuildProjectName) -> $(_ShortName) (OSes=%(_ProjectInfo.SupportedOSes), SplitTests=%(_ProjectInfo.SplitTests), HasTestMetadata=$(_HasTestMetadata))"
-             Importance="high"
+             Importance="Low"
              Condition="'@(_ProjectInfo->Count())' > 0" />
   </Target>
 

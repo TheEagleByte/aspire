@@ -221,7 +221,7 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
       $meta = $null
       if ($metadataFile -and (Test-Path $metadataFile)) {
         $meta = Read-Metadata $metadataFile $proj.project
-        Write-Host "  Loaded metadata for $($proj.project) from $metadataFile (requiresNugets=$($meta.requiresNugets))"
+        #Write-Host "  Loaded metadata for $($proj.project) from $metadataFile (requiresNugets=$($meta.requiresNugets))"
       } else {
         # Use defaults if no metadata file exists
         $meta = @{
@@ -270,7 +270,7 @@ foreach ($entry in $entries) {
   if (-not $supportedOSes) {
     $supportedOSes = @('windows', 'linux', 'macos')
   }
-  
+
   foreach ($os in $supportedOSes) {
     $expandedEntry = [ordered]@{}
     foreach ($key in $entry.Keys) {
