@@ -36,19 +36,23 @@ if (-not $enumerationFiles) {
 }
 
 # Validate TestMatrixOutputPath if provided
-if ($TestMatrixOutputPath) {
-    # TestMatrixOutputPath must be a JSON file path
-    if ($TestMatrixOutputPath -notmatch '\.json$') {
-        Write-Error "TestMatrixOutputPath must be a JSON file path: $TestMatrixOutputPath"
-        exit 1
-    }
+# fail if empty
+if ($TestMatrixOutputPath -and [string]::IsNullOrWhiteSpace($TestMatrixOutputPath)) {
+    Write-Error "TestMatrixOutputPath cannot be empty if provided"
+    exit 1
+}
 
-    # Check parent directory exists
-    $parentDir = Split-Path $TestMatrixOutputPath -Parent
-    if (-not (Test-Path $parentDir)) {
-        Write-Error "Parent directory for TestMatrixOutputPath does not exist: $parentDir"
-        exit 1
-    }
+# TestMatrixOutputPath must be a JSON file path
+if ($TestMatrixOutputPath -notmatch '\.json$') {
+    Write-Error "TestMatrixOutputPath must be a JSON file path: $TestMatrixOutputPath"
+    exit 1
+}
+
+# Check parent directory exists
+$parentDir = Split-Path $TestMatrixOutputPath -Parent
+if (-not (Test-Path $parentDir)) {
+    Write-Error "Parent directory for TestMatrixOutputPath does not exist: $parentDir"
+    exit 1
 }
 
 Write-Host "Found $($enumerationFiles.Count) test enumeration files"
@@ -107,35 +111,28 @@ else {
 
 Write-Host "Generating test matrices..."
 
-if ($TestMatrixOutputPath) {
-    # Create directory for intermediate files
-    $tempMatrixDir = Join-Path (Split-Path $TestMatrixOutputPath -Parent) 'temp-matrix'
-    New-Item -Path $tempMatrixDir -ItemType Directory -Force | Out-Null
+# Create directory for intermediate files
+$tempMatrixDir = Join-Path (Split-Path $TestMatrixOutputPath -Parent) 'temp-matrix'
+New-Item -Path $tempMatrixDir -ItemType Directory -Force | Out-Null
 
-    # Call existing matrix generation script if split tests exist
-    if ($splitTestProjects.Count -gt 0) {
-        $matrixScriptPath = Join-Path $RepoRoot 'eng/scripts/generate-test-matrix.ps1'
-        $testListsDir = Join-Path (Split-Path $TestsListOutputPath -Parent) 'helix'
-        Write-Host "Calling matrix generation script..."
-        & $matrixScriptPath -TestListsDirectory $testListsDir -OutputDirectory $tempMatrixDir -BuildOs $BuildOs -RegularTestProjectsFile $TestsListOutputPath
+# Call existing matrix generation script if split tests exist
+$matrixScriptPath = Join-Path $RepoRoot 'eng/scripts/generate-test-matrix.ps1'
+$testListsDir = Join-Path (Split-Path $TestsListOutputPath -Parent) 'helix'
+Write-Host "Calling matrix generation script..."
+& $matrixScriptPath -TestListsDirectory $testListsDir -OutputDirectory $tempMatrixDir -BuildOs $BuildOs -RegularTestProjectsFile $TestsListOutputPath
 
-        # Copy the generated matrix file to the expected location
-        $generatedMatrixFile = Join-Path $tempMatrixDir 'split-tests-matrix.json'
-        if (Test-Path $generatedMatrixFile) {
-            Copy-Item $generatedMatrixFile $TestMatrixOutputPath
-            Write-Host "Matrix file copied to: $TestMatrixOutputPath"
-        } else {
-            Write-Warning "Expected matrix file not found at: $generatedMatrixFile"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tempMatrixDir -Recurse -Force -ErrorAction SilentlyContinue
-    } else {
-        # No split tests, create empty matrix
-        '{"include":[]}' | Set-Content $TestMatrixOutputPath
-        Write-Host "No split tests found, created empty matrix at: $TestMatrixOutputPath"
-    }
+# Copy the generated matrix file to the expected location
+$generatedMatrixFile = Join-Path $tempMatrixDir 'combined-tests-matrix.json'
+if (Test-Path $generatedMatrixFile) {
+    Copy-Item $generatedMatrixFile $TestMatrixOutputPath
+    Write-Host "Matrix file copied to: $TestMatrixOutputPath"
+} else {
+    Write-Error "Expected matrix file not found at: $generatedMatrixFile"
+    exit 1
 }
+
+# Clean up temporary directory
+Remove-Item $tempMatrixDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "Test enumeration processing completed"
 Write-Host "Regular projects written to: $TestsListOutputPath"

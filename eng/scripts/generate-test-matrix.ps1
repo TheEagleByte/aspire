@@ -160,7 +160,7 @@ $listFiles = @(Get-ChildItem -Path $TestListsDirectory -Filter '*.tests.list' -R
 if ($listFiles.Count -eq 0) {
   $empty = @{ include = @() }
   New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-  $empty | ConvertTo-Json -Depth 5 -Compress | Set-Content -Path (Join-Path $OutputDirectory 'split-tests-matrix.json') -Encoding UTF8
+  $empty | ConvertTo-Json -Depth 5 -Compress | Set-Content -Path (Join-Path $OutputDirectory 'combined-tests-matrix.json') -Encoding UTF8
   Write-Host "Empty matrix written (no .tests.list files)."
   exit 0
 }
@@ -262,5 +262,5 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
 
 $matrix = @{ include = $entries }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$matrix | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path (Join-Path $OutputDirectory 'split-tests-matrix.json') -Encoding UTF8
+$matrix | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path (Join-Path $OutputDirectory 'combined-tests-matrix.json') -Encoding UTF8
 Write-Host "Matrix entries: $($entries.Count)"

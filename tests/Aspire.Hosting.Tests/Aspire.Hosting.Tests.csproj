@@ -12,9 +12,9 @@
     <RunOnAzdoHelixLinux>false</RunOnAzdoHelixLinux>
 
     <!-- Enable test splitting for GitHub Actions -->
-    <SplitTestsOnCI Condition="'$(ContinuousIntegrationBuild)' == 'true' or '$(PrepareForHelix)' == 'true'">true</SplitTestsOnCI>
+    <SplitTestsOnCI>true</SplitTestsOnCI>
     <TestClassNamesPrefix>Aspire.Hosting.Tests</TestClassNamesPrefix>
-    
+
     <!-- Test timeouts -->
     <SplitTestSessionTimeout>30m</SplitTestSessionTimeout>
     <SplitTestHangTimeout>15m</SplitTestHangTimeout>

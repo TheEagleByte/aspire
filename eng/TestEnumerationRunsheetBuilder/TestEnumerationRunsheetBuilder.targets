@@ -1,15 +1,50 @@
 <Project>
   <!--
-    TestEnumerationRunsheetBuilder
+    TestEnumerationRunsheetBuilder - Phase 1: Individual Test Project Enumeration
 
-    This runsheet builder enumerates test projects and generates test enumeration data
-    that can be combined to create test matrices for GitHub Actions.
+    This runsheet builder is the first phase of test enumeration for CI/CD. It runs during
+    the build process for each test project and generates individual enumeration files
+    that describe how each test should be run.
+
+    Complete Test Enumeration Workflow:
+
+    Phase 1 (This file - runs per test project during build):
+      1. For each test project:
+         - Checks if it should run on GitHub Actions (via GetRunTestsOnGithubActions)
+         - Determines if tests should be split into partitions
+         - Builds the project and generates test metadata if needed
+         - Writes .testenumeration.json file containing:
+           * Project name, path, short name
+           * BuildOs (linux, windows, darwin)
+           * runOnGithubActions flag
+           * splitTests flag
+           * hasTestMetadata flag
+           * Paths to test list and metadata files
+
+    Phase 2 (AfterSolutionBuild.targets + process-test-enumeration.ps1):
+      1. After all projects are built:
+         - Finds all .testenumeration.json files
+         - Filters by BuildOs and runOnGithubActions
+         - Separates regular vs split test projects
+         - Calls generate-test-matrix-for-split-tests.ps1
+         - Generates combined test matrix JSON
+
+    Phase 3 (GitHub Actions):
+      1. Reads combined test matrix JSON
+      2. Creates parallel jobs for each matrix entry
+      3. Runs tests with appropriate filters/partitions
+
+    Output per test project:
+      - artifacts/tmp/Debug/ProjectName.testenumeration.json
+      - artifacts/helix/ProjectName.tests.list (if splitTests=true)
+      - artifacts/helix/ProjectName.tests.metadata.json (if splitTests=true)
 
     Usage:
-      .\build.cmd -test /p:TestRunnerName=TestEnumerationRunsheetBuilder /p:TestsListOutputPath=artifacts/TestsForGithubActions.list /p:TestMatrixOutputPath=artifacts/test-matrices/ /p:ContinuousIntegrationBuild=true /p:BuildOs=linux
+      .\build.cmd -test /p:TestRunnerName=TestEnumerationRunsheetBuilder /p:TestsListOutputPath=artifacts/TestsForGithubActions.list /p:TestMatrixOutputPath=artifacts/combined-test-matrix.json /p:ContinuousIntegrationBuild=true /p:BuildOs=linux
 
-    This replaces the manual invocation of GetTestProjects.proj and integrates
-    test enumeration into the standard Arcade SDK runsheet builder pattern.
+    This replaces the manual invocation of GetTestProjects.proj and provides automatic
+    detection of split tests based on test project configuration (via SplitTests property
+    or auto-detection based on test count and collection attributes).
     -->
 
   <PropertyGroup>

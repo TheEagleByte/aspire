@@ -108,8 +108,41 @@
 
   <!--
     Test Enumeration Target
-    This target processes individual test enumeration files created by TestEnumerationRunsheetBuilder
-    and generates the same outputs as GetTestProjects.proj.
+
+    This target is the orchestrator for test enumeration in CI/CD. It runs after all test projects
+    have been built and individual .testenumeration.json files have been created.
+
+    Complete workflow:
+    1. Build Phase (TestEnumerationRunsheetBuilder.targets):
+       - Each test project is built and analyzed
+       - Generates .testenumeration.json with metadata:
+         * Project name, path, and short name
+         * BuildOs compatibility
+         * Whether to run on GitHub Actions
+         * Whether tests should be split into partitions
+         * Location of test metadata files (for split tests)
+
+    2. Aggregation Phase (this target):
+       - Calls process-test-enumeration.ps1 to:
+         * Find all .testenumeration.json files in ArtifactsTmpDir
+         * Filter by BuildOs and runOnGithubActions flag
+         * Separate regular vs split test projects
+         * Call generate-test-matrix-for-split-tests.ps1
+         * Generate combined test matrix JSON
+
+    3. Output:
+       - TestMatrixOutputPath: Combined JSON matrix with all test entries
+         * Regular tests: one entry per project
+         * Split tests: multiple entries (one per partition/class)
+       - TestsListOutputPath: Simple list of test project names (backward compatibility)
+
+    4. CI/CD Consumption (GitHub Actions):
+       - Workflow reads TestMatrixOutputPath JSON
+       - Creates parallel jobs for each matrix entry
+       - Each job runs specific test partition or full project
+
+    This replaces the manual invocation of GetTestProjects.proj and provides
+    automatic detection of split tests based on test project configuration.
     -->
   <Target Name="_GenerateTestEnumeration" BeforeTargets="Test" Condition=" '$(TestRunnerName)' == 'TestEnumerationRunsheetBuilder' and '$(MSBuildProjectName)' != '' and !$(MSBuildProjectName.EndsWith('.Tests')) ">
     <!-- Ensure required parameters are set -->
