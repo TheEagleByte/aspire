@@ -56,7 +56,7 @@ runs:
           $testsNotRequiringNugets = @()
 
           foreach ($test in $matrixContent.include) {
-            if ($test.requiresNugets -eq $true) {
+            if ($test.requiresNugets -eq "true" -or $test.requiresNugets -eq $true) {
               $testsRequiringNugets += $test
             } else {
               $testsNotRequiringNugets += $test
