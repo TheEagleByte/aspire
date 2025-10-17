@@ -15,24 +15,24 @@
          - Builds the project and generates test metadata if needed
          - Writes .testenumeration.json file containing:
            * Project name, path, short name
-           * BuildOs (linux, windows, darwin)
-           * runOnGithubActions flag
+           * supportedOSes array
            * splitTests flag
            * hasTestMetadata flag
            * Paths to test list and metadata files
 
-    Phase 2 (AfterSolutionBuild.targets + process-test-enumeration.ps1):
+    Phase 2 (AfterSolutionBuild.targets + build-test-matrix.ps1):
       1. After all projects are built:
          - Finds all .testenumeration.json files
-         - Filters by BuildOs and runOnGithubActions
-         - Separates regular vs split test projects
-         - Calls generate-test-matrix-for-split-tests.ps1
-         - Generates combined test matrix JSON
+         - Filters by OS and processes regular vs split test projects
+         - For split tests: reads .tests.list and creates multiple matrix entries
+         - For regular tests: creates one matrix entry per project
+         - Generates combined test matrix JSON in a single pass
 
     Phase 3 (GitHub Actions):
       1. Reads combined test matrix JSON
-      2. Creates parallel jobs for each matrix entry
-      3. Runs tests with appropriate filters/partitions
+      2. Expands matrix entries by supported OSes
+      3. Creates parallel jobs for each matrix entry
+      4. Runs tests with appropriate filters/partitions
 
     Output per test project:
       - artifacts/tmp/Debug/ProjectName.testenumeration.json
