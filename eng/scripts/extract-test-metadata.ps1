@@ -83,40 +83,40 @@ $classes     = [System.Collections.Generic.HashSet[string]]::new()
 $partitionsFile = [System.IO.Path]::GetTempFileName()
 try {
   $toolPath = Join-Path $RepoRoot "artifacts/bin/ExtractTestPartitions/Debug/net8.0/ExtractTestPartitions.dll"
-  
+
   # Build the tool if it doesn't exist
   if (-not (Test-Path $toolPath)) {
     Write-Host "Building ExtractTestPartitions tool..."
     $toolProjectPath = Join-Path $RepoRoot "tools/ExtractTestPartitions/ExtractTestPartitions.csproj"
     & dotnet build $toolProjectPath -c Debug --nologo -v quiet
     if ($LASTEXITCODE -ne 0) {
-      Write-Warning "Failed to build ExtractTestPartitions tool. Falling back to class-based mode."
+      Write-Error "Failed to build ExtractTestPartitions tool."
     }
   }
 
-  # Run the tool if available
-  if (Test-Path $toolPath) {
-    Write-Host "Extracting partitions from assembly: $TestAssemblyPath"
-    & dotnet $toolPath --assembly-path $TestAssemblyPath --output-file $partitionsFile 2>&1 | Write-Host
-    
-    if ($LASTEXITCODE -eq 0 -and (Test-Path $partitionsFile)) {
-      $partitionLines = Get-Content $partitionsFile -ErrorAction SilentlyContinue
-      if ($partitionLines) {
-        foreach ($partition in $partitionLines) {
-          if (-not [string]::IsNullOrWhiteSpace($partition)) {
-            $collections.Add($partition.Trim()) | Out-Null
-          }
-        }
-        Write-Host "Found $($collections.Count) partition(s) via attribute extraction"
+  Write-Host "Extracting partitions from assembly: $TestAssemblyPath"
+  & dotnet $toolPath --assembly-path $TestAssemblyPath --output-file $partitionsFile 2>&1 | Write-Host
+  # throw on failure
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to extract partitions from assembly."
+  }
+
+  # throw if partitions file missing
+  if (-not (Test-Path $partitionsFile)) {
+    throw "Partitions file not created by ExtractTestPartitions tool."
+  }
+
+  $partitionLines = Get-Content $partitionsFile -ErrorAction SilentlyContinue
+  if ($partitionLines) {
+    foreach ($partition in $partitionLines) {
+      if (-not [string]::IsNullOrWhiteSpace($partition)) {
+        $collections.Add($partition.Trim()) | Out-Null
       }
     }
+    Write-Host "Found $($collections.Count) partition(s) via attribute extraction"
   }
 } catch {
   Write-Warning "Error running ExtractTestPartitions tool: $_"
-} finally {
-  if (Test-Path $partitionsFile) {
-    Remove-Item $partitionsFile -Force
-  }
 }
 
 # Extract class names from test listing

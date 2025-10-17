@@ -67,33 +67,24 @@ static void ExtractPartitions(string assemblyPath, string outputFile)
             {
                 var attrTypeName = attr.AttributeType.FullName ?? attr.AttributeType.Name;
 
-                // Check for [Collection("name")] attribute
-                if (attrTypeName.EndsWith(".CollectionAttribute") || attrTypeName == "CollectionAttribute")
+                if (!attrTypeName.EndsWith(".TraitAttribute") && attrTypeName != "TraitAttribute")
                 {
-                    if (attr.ConstructorArguments.Count > 0 && attr.ConstructorArguments[0].Value is string collectionName)
-                    {
-                        if (!string.IsNullOrWhiteSpace(collectionName))
-                        {
-                            partitions.Add(collectionName);
-                            Console.WriteLine($"Found Collection: {collectionName} on {type.Name}");
-                        }
-                    }
+                    continue;
                 }
-                // Check for [Trait("Partition", "name")] attribute
-                else if (attrTypeName.EndsWith(".TraitAttribute") || attrTypeName == "TraitAttribute")
-                {
-                    if (attr.ConstructorArguments.Count >= 2)
-                    {
-                        var key = attr.ConstructorArguments[0].Value as string;
-                        var value = attr.ConstructorArguments[1].Value as string;
 
-                        if (key?.Equals("Partition", StringComparison.OrdinalIgnoreCase) == true &&
-                            !string.IsNullOrWhiteSpace(value))
-                        {
-                            partitions.Add(value);
-                            Console.WriteLine($"Found Trait Partition: {value} on {type.Name}");
-                        }
-                    }
+                if (attr.ConstructorArguments.Count < 2)
+                {
+                    continue;
+                }
+
+                var key = attr.ConstructorArguments[0].Value as string;
+                var value = attr.ConstructorArguments[1].Value as string;
+
+                if (key?.Equals("Partition", StringComparison.OrdinalIgnoreCase) == true &&
+                    !string.IsNullOrWhiteSpace(value))
+                {
+                    partitions.Add(value);
+                    Console.WriteLine($"Found Trait Partition: {value} on {type.Name}");
                 }
             }
         }
