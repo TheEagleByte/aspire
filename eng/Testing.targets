@@ -120,11 +120,29 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <_ProjectInfo Include="$(MSBuildProjectFullPath)">
-        <RunTestsOnGithubActions>$(RunOnGithubActions)</RunTestsOnGithubActions>
-        <SplitTests>$(_ShouldSplit)</SplitTests>
-        <MSBuildSourceProjectFile>$(MSBuildProjectFullPath)</MSBuildSourceProjectFile>
-      </_ProjectInfo>
+      <!-- Return OS-specific information based on BuildOs parameter -->
+      <_ProjectInfo Condition="'$(BuildOs)' == 'windows'"
+                    Include="$(MSBuildProjectFullPath)"
+                    RunTestsOnGithubActions="$(RunOnGithubActionsWindows)"
+                    SplitTests="$(_ShouldSplit)"
+                    MSBuildSourceProjectFile="$(MSBuildProjectFullPath)" />
+      <_ProjectInfo Condition="'$(BuildOs)' == 'linux'"
+                    Include="$(MSBuildProjectFullPath)"
+                    RunTestsOnGithubActions="$(RunOnGithubActionsLinux)"
+                    SplitTests="$(_ShouldSplit)"
+                    MSBuildSourceProjectFile="$(MSBuildProjectFullPath)" />
+      <_ProjectInfo Condition="'$(BuildOs)' == 'darwin'"
+                    Include="$(MSBuildProjectFullPath)"
+                    RunTestsOnGithubActions="$(RunOnGithubActionsMacOS)"
+                    SplitTests="$(_ShouldSplit)"
+                    MSBuildSourceProjectFile="$(MSBuildProjectFullPath)" />
+
+      <!-- Fallback for when BuildOs is not specified (legacy behavior) -->
+      <_ProjectInfo Condition="'$(BuildOs)' == ''"
+                    Include="$(MSBuildProjectFullPath)"
+                    RunTestsOnGithubActions="$(RunOnGithubActions)"
+                    SplitTests="$(_ShouldSplit)"
+                    MSBuildSourceProjectFile="$(MSBuildProjectFullPath)" />
     </ItemGroup>
   </Target>
 

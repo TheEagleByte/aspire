@@ -79,7 +79,7 @@
     <Message Text="[$(MSBuildProjectName)] Starting test metadata extraction (v3 auto-detection)..." Importance="High" />
 
     <!-- Run test assembly to list all tests -->
-    <Exec Command="&quot;$(RunCommand)&quot; --filter-not-trait category=failing --list-tests" 
+    <Exec Command="&quot;$(RunCommand)&quot; --filter-not-trait category=failing --list-tests"
           ConsoleToMSBuild="true"
           IgnoreExitCode="false">
       <Output TaskParameter="ConsoleOutput" ItemName="_TestAssemblyOutput" />
@@ -88,15 +88,15 @@
     <PropertyGroup>
       <!-- Path to discovery helper script -->
       <_DiscoveryScriptPath>$(RepoRoot)eng\scripts\extract-test-metadata.ps1</_DiscoveryScriptPath>
-      
+
       <!-- Output files -->
       <_TestListFile>$(TestArchiveTestsDir)$(MSBuildProjectName).tests.list</_TestListFile>
       <_MetadataFile>$(TestArchiveTestsDir)$(MSBuildProjectName).tests.metadata.json</_MetadataFile>
-      
+
       <!-- Normalize path separators for cross-platform compatibility -->
       <_RelativeProjectPath>$(MSBuildProjectDirectory.Replace('$(RepoRoot)', ''))</_RelativeProjectPath>
       <_RelativeProjectPath>$(_RelativeProjectPath.Replace('\', '/'))</_RelativeProjectPath>
-      
+
       <!-- Collections to skip (if any) -->
       <_CollectionsToSkip Condition="'$(TestCollectionsToSkipSplitting)' != ''">$(TestCollectionsToSkipSplitting)</_CollectionsToSkip>
       <_CollectionsToSkip Condition="'$(TestCollectionsToSkipSplitting)' == ''"></_CollectionsToSkip>
@@ -136,7 +136,7 @@
 
     <!-- Call PowerShell discovery helper -->
     <Message Text="[$(MSBuildProjectName)] Running discovery helper..." Importance="High" />
-    
+
     <PropertyGroup>
       <_PwshCommand>pwsh</_PwshCommand>
       <_PwshCommand Condition="'$(OS)' == 'Windows_NT'">powershell</_PwshCommand>
@@ -151,8 +151,8 @@
       <_DiscoveryCommand>$(_DiscoveryCommand) -RepoRoot &quot;$(RepoRoot)&quot;</_DiscoveryCommand>
     </PropertyGroup>
 
-    <Exec Command="$(_DiscoveryCommand)" 
-          IgnoreExitCode="false" 
+    <Exec Command="$(_DiscoveryCommand)"
+          IgnoreExitCode="false"
           WorkingDirectory="$(RepoRoot)" />
 
     <!-- Clean up temp file -->
@@ -164,23 +164,6 @@
 
     <Message Text="[$(MSBuildProjectName)] ✅ Test metadata extraction complete!" Importance="High" />
     <Message Text="[$(MSBuildProjectName)] Files: $(_TestListFile), $(_MetadataFile)" Importance="High" />
-  </Target>
-
-  <Target Name="GetRunTestsOnGithubActions" Returns="@(TestProject)">
-    <ItemGroup>
-      <TestProject Condition="'$(BuildOs)' == 'windows'" 
-                   Include="$(MSBuildProjectFullPath)" 
-                   RunTestsOnGithubActions="$(RunOnGithubActionsWindows)" 
-                   SplitTests="$(SplitTestsOnCI)" />
-      <TestProject Condition="'$(BuildOs)' == 'linux'" 
-                   Include="$(MSBuildProjectFullPath)" 
-                   RunTestsOnGithubActions="$(RunOnGithubActionsLinux)" 
-                   SplitTests="$(SplitTestsOnCI)" />
-      <TestProject Condition="'$(BuildOs)' == 'darwin'" 
-                   Include="$(MSBuildProjectFullPath)" 
-                   RunTestsOnGithubActions="$(RunOnGithubActionsMacOS)" 
-                   SplitTests="$(SplitTestsOnCI)" />
-    </ItemGroup>
   </Target>
 
   <Import Project="$(TestsSharedDir)Aspire.Templates.Testing.targets" Condition="'$(IsTemplateTestProject)' == 'true'" />

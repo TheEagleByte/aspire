@@ -17,6 +17,11 @@
     <Error Condition="'$(TestsListOutputPath)' == ''"
            Text="%24(TestsListOutputPath) is unset" />
 
+    <PropertyGroup>
+      <_BuildOs Condition="'$(BuildOs)' == ''">linux</_BuildOs>
+      <_BuildOs Condition="'$(BuildOs)' != ''">$(BuildOs)</_BuildOs>
+    </PropertyGroup>
+
     <ItemGroup>
       <_TestProjectsToExclude Include="$(RepoRoot)tests\Shared\**\*Tests.csproj" />
       <_TestProjectsToExclude Include="$(RepoRoot)tests\testproject\**\*Tests.csproj" />
@@ -24,15 +29,15 @@
 
       <!-- This runs in a separate job -->
       <_TestProjectsToExclude Include="$(RepoRoot)tests\Aspire.EndToEnd.Tests\**\*Tests.csproj" />
-      <!-- This runs in a separate job -->
-      <_TestProjectsToExclude Include="$(RepoRoot)tests\Aspire.Templates.Tests\**\*Tests.csproj" />
 
       <_TestProjects Include="$(RepoRoot)tests\**\*Tests.csproj"
                      Exclude="@(_TestProjectsToExclude)" />
     </ItemGroup>
 
     <!-- this returns an item list of [true, true, false...] with %(MSBuildSourceProjectFile) set -->
-    <MSBuild Projects="@(_TestProjects)" Targets="GetRunTestsOnGithubActions">
+    <MSBuild Projects="@(_TestProjects)"
+             Properties="BuildOs=$(_BuildOs);PrepareForHelix=true"
+             Targets="GetRunTestsOnGithubActions">
       <Output TaskParameter="TargetOutputs" ItemName="ProjectRunTestsOnGithubActions" />
     </MSBuild>
 
@@ -51,9 +56,9 @@
                       Lines="@(RegularTestProjects->'%(ShortName)')"
                       Overwrite="true" />
 
-    <!-- Write separate list for split test projects -->
+    <!-- Write separate list for split test projects (deduplicated) -->
     <WriteLinesToFile File="$(TestsListOutputPath).split-projects"
-                      Lines="@(SplitTestProjects->'%(ShortName)')"
+                      Lines="@(SplitTestProjects->Distinct()->'%(ShortName)')"
                       Overwrite="true"
                       Condition="'@(SplitTestProjects->Count())' &gt; 0" />
   </Target>
@@ -71,8 +76,6 @@
 
       <!-- This runs in a separate job -->
       <_TestProjectsToExclude Include="$(RepoRoot)tests\Aspire.EndToEnd.Tests\**\*Tests.csproj" />
-      <!-- This runs in a separate job -->
-      <_TestProjectsToExclude Include="$(RepoRoot)tests\Aspire.Templates.Tests\**\*Tests.csproj" />
 
       <_TestProjects Include="$(RepoRoot)tests\**\*Tests.csproj"
                      Exclude="@(_TestProjectsToExclude)" />
