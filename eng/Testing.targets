@@ -236,7 +236,7 @@
                       Lines="$(_MetadataJson)"
                       Overwrite="true" />
 
-    <Message Text="Wrote test metadata: $(_MetadataFile) (requiresNugets=$(_RequiresNugets), requiresTestSdk=$(_RequiresTestSdk), enablePlaywright=$(_EnablePlaywrightInstall), supportedOSes=$(_SupportedOSesJson), path=$(_RelativeProjectPath))" Importance="high" />
+    <Message Text="Wrote test metadata: $(_MetadataFile) (requiresNugets=$(_RequiresNugets), requiresTestSdk=$(_RequiresTestSdk), enablePlaywright=$(_EnablePlaywrightInstall), supportedOSes=$(_SupportedOSesJson), path=$(_RelativeProjectPath))" Importance="Low" />
   </Target>
 
 </Project>

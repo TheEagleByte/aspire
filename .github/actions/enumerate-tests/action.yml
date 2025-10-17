@@ -51,24 +51,61 @@ runs:
         if (Test-Path $matrixFilePath) {
           $matrixContent = Get-Content -Raw $matrixFilePath | ConvertFrom-Json
 
-          # Split tests based on requiresNugets property
+          # Define defaults to apply when properties are missing
+          $defaults = @{
+            extraTestArgs = ''
+            requiresNugets = $false
+            requiresTestSdk = $false
+            enablePlaywrightInstall = $false
+            testSessionTimeout = '20m'
+            testHangTimeout = '10m'
+            supportedOSes = @('windows', 'linux', 'macos')
+          }
+
+          # Split tests based on requiresNugets property and expand by OS
           $testsRequiringNugets = @()
           $testsNotRequiringNugets = @()
 
           foreach ($test in $matrixContent.include) {
-            # Add OS runner mapping to each entry
-            $osRunner = switch ($test.os) {
-              'windows' { 'windows-latest' }
-              'linux' { 'ubuntu-latest' }
-              'macos' { 'macos-latest' }
-              default { 'ubuntu-latest' }
+            # Apply defaults for missing properties
+            foreach ($key in $defaults.Keys) {
+              if ($key -ne 'supportedOSes' -and -not $test.PSObject.Properties.Name.Contains($key)) {
+                $test | Add-Member -NotePropertyName $key -NotePropertyValue $defaults[$key] -Force
+              }
             }
-            $test | Add-Member -NotePropertyName 'runs-on' -NotePropertyValue $osRunner -Force
 
-            if ($test.requiresNugets -eq "true" -or $test.requiresNugets -eq $true) {
-              $testsRequiringNugets += $test
+            # Get supported OSes (use test-specific if present, otherwise default)
+            $supportedOSes = if ($test.PSObject.Properties.Name.Contains('supportedOSes')) {
+              $test.supportedOSes
             } else {
-              $testsNotRequiringNugets += $test
+              $defaults.supportedOSes
+            }
+
+            # Expand test entry for each supported OS
+            foreach ($os in $supportedOSes) {
+              # Create a new entry for each OS
+              $testCopy = [PSCustomObject]@{}
+              foreach ($prop in $test.PSObject.Properties) {
+                if ($prop.Name -ne 'supportedOSes') {
+                  $testCopy | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                }
+              }
+
+              # Add OS runner mapping
+              $osRunner = switch ($os) {
+                'windows' { 'windows-latest' }
+                'linux' { 'ubuntu-latest' }
+                'macos' { 'macos-latest' }
+                default { 'ubuntu-latest' }
+              }
+              $testCopy | Add-Member -NotePropertyName 'runs-on' -NotePropertyValue $osRunner -Force
+
+              # Add to appropriate list based on requiresNugets
+              if ($testCopy.requiresNugets -eq "true" -or $testCopy.requiresNugets -eq $true) {
+                $testsRequiringNugets += $testCopy
+              } else {
+                $testsNotRequiringNugets += $testCopy
+              }
             }
           }
 

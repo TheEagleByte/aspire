@@ -48,11 +48,23 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Define default values - only include properties in output when they differ from these
+$script:Defaults = @{
+  extraTestArgs = ''
+  requiresNugets = $false
+  requiresTestSdk = $false
+  enablePlaywrightInstall = $false
+  testSessionTimeout = '20m'
+  testHangTimeout = '10m'
+  supportedOSes = @('windows', 'linux', 'macos')
+}
+
 function Read-Metadata($file, $projectName) {
   $defaults = @{
     projectName = $projectName
     testClassNamesPrefix = $projectName
     testProjectPath = "tests/$projectName/$projectName.csproj"
+    extraTestArgs = ''
     requiresNugets = 'false'
     requiresTestSdk = 'false'
     enablePlaywrightInstall = 'false'
@@ -74,22 +86,45 @@ function Read-Metadata($file, $projectName) {
   return $defaults
 }
 
+function Add-OptionalProperty($entry, $key, $value, $default) {
+  # Only add property if it differs from the default
+  if ($null -ne $default) {
+    if ($value -is [Array] -and $default -is [Array]) {
+      # Compare arrays
+      if (($value.Count -ne $default.Count) -or (Compare-Object $value $default)) {
+        $entry[$key] = $value
+      }
+    } elseif ($value -ne $default) {
+      $entry[$key] = $value
+    }
+  } else {
+    # No default, always include
+    $entry[$key] = $value
+  }
+}
+
 function New-EntryCollection($c,$meta) {
   $projectShortName = $meta.projectName -replace '^Aspire\.' -replace '\.Tests$'
-  [ordered]@{
+  $extraTestArgsValue = "--filter-trait `"Partition=$c`""
+
+  $entry = [ordered]@{
     type = 'collection'
     projectName = $meta.projectName
     name = $c
     shortname = "${projectShortName}_$c"
     testProjectPath = $meta.testProjectPath
-    extraTestArgs = "--filter-trait `"Partition=$c`""
-    requiresNugets = ($meta.requiresNugets -eq 'true')
-    requiresTestSdk = ($meta.requiresTestSdk -eq 'true')
-    enablePlaywrightInstall = ($meta.enablePlaywrightInstall -eq 'true')
-    testSessionTimeout = $meta.testSessionTimeout
-    testHangTimeout = $meta.testHangTimeout
-    supportedOSes = $meta.supportedOSes
   }
+
+  # Add optional properties only if they differ from defaults
+  Add-OptionalProperty $entry 'extraTestArgs' $extraTestArgsValue $script:Defaults.extraTestArgs
+  Add-OptionalProperty $entry 'requiresNugets' ($meta.requiresNugets -eq 'true') $script:Defaults.requiresNugets
+  Add-OptionalProperty $entry 'requiresTestSdk' ($meta.requiresTestSdk -eq 'true') $script:Defaults.requiresTestSdk
+  Add-OptionalProperty $entry 'enablePlaywrightInstall' ($meta.enablePlaywrightInstall -eq 'true') $script:Defaults.enablePlaywrightInstall
+  Add-OptionalProperty $entry 'testSessionTimeout' $meta.testSessionTimeout $script:Defaults.testSessionTimeout
+  Add-OptionalProperty $entry 'testHangTimeout' $meta.testHangTimeout $script:Defaults.testHangTimeout
+  Add-OptionalProperty $entry 'supportedOSes' $meta.supportedOSes $script:Defaults.supportedOSes
+
+  return $entry
 }
 
 function New-EntryUncollected($collections,$meta) {
@@ -97,20 +132,30 @@ function New-EntryUncollected($collections,$meta) {
   foreach ($c in $collections) {
     $filters += "--filter-not-trait `"Partition=$c`""
   }
-  [ordered]@{
+  $extraTestArgsValue = ($filters -join ' ')
+
+  $entry = [ordered]@{
     type = 'uncollected'
     projectName = $meta.projectName
     name = 'UncollectedTests'
     shortname = 'Uncollected'
     testProjectPath = $meta.testProjectPath
-    extraTestArgs = ($filters -join ' ')
-    requiresNugets = ($meta.requiresNugets -eq 'true')
-    requiresTestSdk = ($meta.requiresTestSdk -eq 'true')
-    enablePlaywrightInstall = ($meta.enablePlaywrightInstall -eq 'true')
-    testSessionTimeout = ($meta.uncollectedTestsSessionTimeout ?? $meta.testSessionTimeout)
-    testHangTimeout = ($meta.uncollectedTestsHangTimeout ?? $meta.testHangTimeout)
-    supportedOSes = $meta.supportedOSes
   }
+
+  # Add optional properties only if they differ from defaults
+  # Note: uncollected tests may have different timeout defaults
+  $uncollectedSessionTimeout = $meta.uncollectedTestsSessionTimeout ?? $meta.testSessionTimeout
+  $uncollectedHangTimeout = $meta.uncollectedTestsHangTimeout ?? $meta.testHangTimeout
+
+  Add-OptionalProperty $entry 'extraTestArgs' $extraTestArgsValue $script:Defaults.extraTestArgs
+  Add-OptionalProperty $entry 'requiresNugets' ($meta.requiresNugets -eq 'true') $script:Defaults.requiresNugets
+  Add-OptionalProperty $entry 'requiresTestSdk' ($meta.requiresTestSdk -eq 'true') $script:Defaults.requiresTestSdk
+  Add-OptionalProperty $entry 'enablePlaywrightInstall' ($meta.enablePlaywrightInstall -eq 'true') $script:Defaults.enablePlaywrightInstall
+  Add-OptionalProperty $entry 'testSessionTimeout' $uncollectedSessionTimeout $script:Defaults.testSessionTimeout
+  Add-OptionalProperty $entry 'testHangTimeout' $uncollectedHangTimeout $script:Defaults.testHangTimeout
+  Add-OptionalProperty $entry 'supportedOSes' $meta.supportedOSes $script:Defaults.supportedOSes
+
+  return $entry
 }
 
 function New-EntryClass($full,$meta) {
@@ -119,41 +164,43 @@ function New-EntryClass($full,$meta) {
   if ($prefix -and $full.StartsWith("$prefix.")) {
     $short = $full.Substring($prefix.Length + 1)
   }
-  [ordered]@{
+  $extraTestArgsValue = "--filter-class `"$full`""
+
+  $entry = [ordered]@{
     type = 'class'
     projectName = $meta.projectName
     name = $short
     shortname = $short
     fullClassName = $full
     testProjectPath = $meta.testProjectPath
-    extraTestArgs = "--filter-class `"$full`""
-    requiresNugets = ($meta.requiresNugets -eq 'true')
-    requiresTestSdk = ($meta.requiresTestSdk -eq 'true')
-    enablePlaywrightInstall = ($meta.enablePlaywrightInstall -eq 'true')
-    testSessionTimeout = $meta.testSessionTimeout
-    testHangTimeout = $meta.testHangTimeout
-    supportedOSes = $meta.supportedOSes
   }
+
+  # Add optional properties only if they differ from defaults
+  Add-OptionalProperty $entry 'extraTestArgs' $extraTestArgsValue $script:Defaults.extraTestArgs
+  Add-OptionalProperty $entry 'requiresNugets' ($meta.requiresNugets -eq 'true') $script:Defaults.requiresNugets
+  Add-OptionalProperty $entry 'requiresTestSdk' ($meta.requiresTestSdk -eq 'true') $script:Defaults.requiresTestSdk
+  Add-OptionalProperty $entry 'enablePlaywrightInstall' ($meta.enablePlaywrightInstall -eq 'true') $script:Defaults.enablePlaywrightInstall
+  Add-OptionalProperty $entry 'testSessionTimeout' $meta.testSessionTimeout $script:Defaults.testSessionTimeout
+  Add-OptionalProperty $entry 'testHangTimeout' $meta.testHangTimeout $script:Defaults.testHangTimeout
+  Add-OptionalProperty $entry 'supportedOSes' $meta.supportedOSes $script:Defaults.supportedOSes
+
+  return $entry
 }
 
 function New-EntryRegular($shortName) {
-  [ordered]@{
+  $entry = [ordered]@{
     type = 'regular'
     projectName = "Aspire.$shortName.Tests"
     name = $shortName
     shortname = $shortName
     testProjectPath = "tests/Aspire.$shortName.Tests/Aspire.$shortName.Tests.csproj"
-    extraTestArgs = ""
-    requiresNugets = $false
-    requiresTestSdk = $false
-    enablePlaywrightInstall = $false
-    testSessionTimeout = '20m'
-    testHangTimeout = '10m'
-    supportedOSes = @('windows', 'linux', 'macos')
   }
-}
 
-if (-not (Test-Path $TestListsDirectory)) {
+  # All defaults match, so no need to add any optional properties
+  # (extraTestArgs is empty, which matches the default)
+
+  return $entry
+}if (-not (Test-Path $TestListsDirectory)) {
   throw "Test lists directory not found: $TestListsDirectory"
 }
 
@@ -224,15 +271,18 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
         #Write-Host "  Loaded metadata for $($proj.project) from $metadataFile (requiresNugets=$($meta.requiresNugets))"
       } else {
         # Use defaults if no metadata file exists
+        # Note: supportedOSes comes from the project JSON, not defaults
+        $projectSupportedOSes = if ($proj.PSObject.Properties['supportedOSes']) { $proj.supportedOSes } else { @('windows', 'linux', 'macos') }
         $meta = @{
           projectName = $proj.project
           testProjectPath = $proj.fullPath
+          extraTestArgs = ''
           requiresNugets = 'false'
           requiresTestSdk = 'false'
           enablePlaywrightInstall = 'false'
           testSessionTimeout = '20m'
           testHangTimeout = '10m'
-          supportedOSes = ($proj.supportedOSes ?? @('windows', 'linux', 'macos'))
+          supportedOSes = $projectSupportedOSes
         }
         Write-Host "  Using default metadata for $($proj.project) (no metadata file found at $metadataFile)"
       }
@@ -243,14 +293,20 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
         name = $proj.shortName
         shortname = $proj.shortName
         testProjectPath = $proj.fullPath
-        extraTestArgs = ""
-        requiresNugets = ($meta.requiresNugets -eq 'true')
-        requiresTestSdk = ($meta.requiresTestSdk -eq 'true')
-        enablePlaywrightInstall = ($meta.enablePlaywrightInstall -eq 'true')
-        testSessionTimeout = $meta.testSessionTimeout
-        testHangTimeout = $meta.testHangTimeout
-        supportedOSes = ($proj.supportedOSes ?? $meta.supportedOSes)
       }
+
+      # Add optional properties only if they differ from defaults
+      # Note: supportedOSes from the project JSON takes precedence
+      $finalSupportedOSes = if ($proj.PSObject.Properties['supportedOSes']) { $proj.supportedOSes } else { $meta.supportedOSes }
+
+      Add-OptionalProperty $entry 'extraTestArgs' $meta.extraTestArgs $script:Defaults.extraTestArgs
+      Add-OptionalProperty $entry 'requiresNugets' ($meta.requiresNugets -eq 'true') $script:Defaults.requiresNugets
+      Add-OptionalProperty $entry 'requiresTestSdk' ($meta.requiresTestSdk -eq 'true') $script:Defaults.requiresTestSdk
+      Add-OptionalProperty $entry 'enablePlaywrightInstall' ($meta.enablePlaywrightInstall -eq 'true') $script:Defaults.enablePlaywrightInstall
+      Add-OptionalProperty $entry 'testSessionTimeout' $meta.testSessionTimeout $script:Defaults.testSessionTimeout
+      Add-OptionalProperty $entry 'testHangTimeout' $meta.testHangTimeout $script:Defaults.testHangTimeout
+      Add-OptionalProperty $entry 'supportedOSes' $finalSupportedOSes $script:Defaults.supportedOSes
+
       $entries.Add($entry) | Out-Null
     }
   } else {
@@ -263,28 +319,7 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
   }
 }
 
-# Expand entries to create one per supported OS
-$expandedEntries = [System.Collections.Generic.List[object]]::new()
-foreach ($entry in $entries) {
-  $supportedOSes = $entry.supportedOSes
-  if (-not $supportedOSes) {
-    $supportedOSes = @('windows', 'linux', 'macos')
-  }
-
-  foreach ($os in $supportedOSes) {
-    $expandedEntry = [ordered]@{}
-    foreach ($key in $entry.Keys) {
-      if ($key -ne 'supportedOSes') {
-        $expandedEntry[$key] = $entry[$key]
-      }
-    }
-    $expandedEntry['os'] = $os
-    $expandedEntries.Add($expandedEntry) | Out-Null
-  }
-}
-
-$matrix = @{ include = $expandedEntries }
+$matrix = @{ include = $entries }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $matrix | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path (Join-Path $OutputDirectory 'combined-tests-matrix.json') -Encoding UTF8
-Write-Host "Matrix entries (before OS expansion): $($entries.Count)"
-Write-Host "Matrix entries (after OS expansion): $($expandedEntries.Count)"
+Write-Host "Matrix entries: $($entries.Count)"
