@@ -232,7 +232,7 @@ if ($RegularTestProjectsFile -and (Test-Path $RegularTestProjectsFile)) {
           testSessionTimeout = '20m'
           testHangTimeout = '10m'
         }
-        Write-Host "  Using default metadata for $($proj.project) (no metadata file found)"
+        Write-Host "  Using default metadata for $($proj.project) (no metadata file found at $metadataFile)"
       }
 
       $entry = [ordered]@{

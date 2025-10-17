@@ -147,11 +147,11 @@
   </Target>
 
   <!--
-    Target to write test metadata JSON file for split tests.
+    Target to write test metadata JSON file for all test projects.
     This writes properties like requiresNugets and requiresTestSdk to metadata.json.
     -->
   <Target Name="WriteTestMetadata"
-          Condition="'$(SplitTestsOnCI)' == 'true' and '$(PrepareForHelix)' == 'true'">
+          Condition="'$(PrepareForHelix)' == 'true' and '$(IsTestProject)' == 'true'">
     <PropertyGroup>
       <_HelixDir>$([MSBuild]::NormalizeDirectory($(ArtifactsDir), 'helix'))</_HelixDir>
       <_MetadataFile>$(_HelixDir)$(MSBuildProjectName).tests.metadata.json</_MetadataFile>
