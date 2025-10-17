@@ -77,11 +77,12 @@ function Read-Metadata($file, $projectName) {
 }
 
 function New-EntryCollection($c,$meta) {
+  $projectShortName = $meta.projectName -replace '^Aspire\.' -replace '\.Tests$'
   [ordered]@{
     type = 'collection'
     projectName = $meta.projectName
     name = $c
-    shortname = "Collection_$c"
+    shortname = "${projectShortName}_$c"
     testProjectPath = $meta.testProjectPath
     filterArg = "--filter-trait `"Partition=$c`""
     requiresNugets = ($meta.requiresNugets -eq 'true')
