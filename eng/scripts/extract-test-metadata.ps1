@@ -80,7 +80,8 @@ $collections = [System.Collections.Generic.HashSet[string]]::new()
 $classes     = [System.Collections.Generic.HashSet[string]]::new()
 
 # Extract partitions using the ExtractTestPartitions tool
-$partitionsFile = [System.IO.Path]::GetTempFileName()
+# This step is optional - if it fails, we'll fall back to class-based splitting
+$partitionsFile = Join-Path ([System.IO.Path]::GetTempPath()) "partitions-$([System.Guid]::NewGuid()).txt"
 try {
   $toolPath = Join-Path $RepoRoot "artifacts/bin/ExtractTestPartitions/Debug/net8.0/ExtractTestPartitions.dll"
 
@@ -90,33 +91,46 @@ try {
     $toolProjectPath = Join-Path $RepoRoot "tools/ExtractTestPartitions/ExtractTestPartitions.csproj"
     & dotnet build $toolProjectPath -c Debug --nologo -v quiet
     if ($LASTEXITCODE -ne 0) {
-      Write-Error "Failed to build ExtractTestPartitions tool."
+      Write-Host "Warning: Failed to build ExtractTestPartitions tool. Using class-based splitting."
     }
   }
 
-  Write-Host "Extracting partitions from assembly: $TestAssemblyPath"
-  & dotnet $toolPath --assembly-path $TestAssemblyPath --output-file $partitionsFile 2>&1 | Write-Host
-  # throw on failure
-  if ($LASTEXITCODE -ne 0) {
-    throw "Failed to extract partitions from assembly."
-  }
+  if (Test-Path $toolPath) {
+    Write-Host "Extracting partitions from assembly: $TestAssemblyPath"
+    $toolOutput = & dotnet $toolPath --assembly-path $TestAssemblyPath --output-file $partitionsFile 2>&1
+    $toolExitCode = $LASTEXITCODE
 
-  # throw if partitions file missing
-  if (-not (Test-Path $partitionsFile)) {
-    throw "Partitions file not created by ExtractTestPartitions tool."
-  }
+    # Display tool output (informational)
+    if ($toolOutput) {
+      $toolOutput | Write-Host
+    }
 
-  $partitionLines = Get-Content $partitionsFile -ErrorAction SilentlyContinue
-  if ($partitionLines) {
-    foreach ($partition in $partitionLines) {
-      if (-not [string]::IsNullOrWhiteSpace($partition)) {
-        $collections.Add($partition.Trim()) | Out-Null
+    # If partitions file was created, read it (even if exit code is non-zero)
+    if (Test-Path $partitionsFile) {
+      $partitionLines = Get-Content $partitionsFile -ErrorAction SilentlyContinue
+      if ($partitionLines) {
+        foreach ($partition in $partitionLines) {
+          if (-not [string]::IsNullOrWhiteSpace($partition)) {
+            $collections.Add($partition.Trim()) | Out-Null
+          }
+        }
+        Write-Host "Found $($collections.Count) partition(s) via attribute extraction"
       }
     }
-    Write-Host "Found $($collections.Count) partition(s) via attribute extraction"
+    elseif ($toolExitCode -ne 0) {
+      Write-Host "Partition extraction completed with warnings. Falling back to class-based splitting."
+    }
   }
 } catch {
-  Write-Warning "Error running ExtractTestPartitions tool: $_"
+  # Partition extraction is optional - if it fails, we fall back to class-based splitting
+  Write-Host "Partition extraction encountered an issue. Falling back to class-based splitting."
+  Write-Host "Details: $_"
+}
+finally {
+  # Clean up temp file
+  if (Test-Path $partitionsFile) {
+    Remove-Item $partitionsFile -ErrorAction SilentlyContinue
+  }
 }
 
 # Extract class names from test listing
