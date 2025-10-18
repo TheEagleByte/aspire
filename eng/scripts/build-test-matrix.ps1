@@ -23,7 +23,7 @@
   Path to write the combined test matrix JSON file.
 
 .PARAMETER TestsListOutputFile
-  Optional path to write backward-compatible test list file (regular tests only).
+  Optional path to write backward-compatible test list file (regular tests only) used on AzDO
 
 .PARAMETER CurrentOS
   Current operating system (linux, windows, macos). Filters tests by supported OSes.
@@ -113,11 +113,12 @@ function New-CollectionTestEntry {
   )
 
   $suffix = if ($IsUncollected) { 'uncollected' } else { $CollectionName }
+  $baseShortName = if ($Metadata.shortName) { $Metadata.shortName } else { $Metadata.projectName }
 
   $entry = [ordered]@{
     type = 'collection'
     project = $Metadata.projectName
-    shortname = if ($IsUncollected) { $Metadata.projectName } else { "$($Metadata.projectName)-$suffix" }
+    shortname = if ($IsUncollected) { "$baseShortName-$suffix" } else { "$baseShortName-$suffix" }
     testProjectPath = $Metadata.testProjectPath
     workitemprefix = "$($Metadata.projectName)_$suffix"
     collection = $CollectionName
@@ -171,11 +172,12 @@ function New-ClassTestEntry {
 
   # Extract short class name (last segment after last dot)
   $shortClassName = $ClassName.Split('.')[-1]
+  $baseShortName = if ($Metadata.shortName) { $Metadata.shortName } else { $Metadata.projectName }
 
   $entry = [ordered]@{
     type = 'class'
     project = $Metadata.projectName
-    shortname = "$($Metadata.projectName)-$shortClassName"
+    shortname = "$baseShortName-$shortClassName"
     testProjectPath = $Metadata.testProjectPath
     workitemprefix = "$($Metadata.projectName)_$shortClassName"
     classname = $ClassName

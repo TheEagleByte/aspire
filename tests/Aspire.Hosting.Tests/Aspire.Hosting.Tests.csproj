@@ -16,8 +16,8 @@
     <TestClassNamesPrefix>Aspire.Hosting.Tests</TestClassNamesPrefix>
 
     <!-- Test timeouts -->
-    <SplitTestSessionTimeout>30m</SplitTestSessionTimeout>
-    <SplitTestHangTimeout>15m</SplitTestHangTimeout>
+    <TestSessionTimeout>30m</TestSessionTimeout>
+    <TestHangTimeout>15m</TestHangTimeout>
     <UncollectedTestsSessionTimeout>20m</UncollectedTestsSessionTimeout>
     <UncollectedTestsHangTimeout>10m</UncollectedTestsHangTimeout>
   </PropertyGroup>

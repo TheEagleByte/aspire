@@ -210,15 +210,24 @@
       <!-- Remove trailing comma -->
       <_SupportedOSesJson Condition="'$(_SupportedOSesJson)' != ''">$(_SupportedOSesJson.TrimEnd(','))</_SupportedOSesJson>
 
-      <!-- Use custom timeout values if provided -->
-      <_TestSessionTimeout Condition="'$(SplitTestSessionTimeout)' != ''">$(SplitTestSessionTimeout)</_TestSessionTimeout>
-      <_TestSessionTimeout Condition="'$(SplitTestSessionTimeout)' == ''">20m</_TestSessionTimeout>
-      <_TestHangTimeout Condition="'$(SplitTestHangTimeout)' != ''">$(SplitTestHangTimeout)</_TestHangTimeout>
-      <_TestHangTimeout Condition="'$(SplitTestHangTimeout)' == ''">10m</_TestHangTimeout>
+      <!-- Use custom timeout values if provided, otherwise use defaults -->
+      <_TestSessionTimeout Condition="'$(TestSessionTimeout)' != ''">$(TestSessionTimeout)</_TestSessionTimeout>
+      <_TestSessionTimeout Condition="'$(TestSessionTimeout)' == ''">20m</_TestSessionTimeout>
+      <_TestHangTimeout Condition="'$(TestHangTimeout)' != ''">$(TestHangTimeout)</_TestHangTimeout>
+      <_TestHangTimeout Condition="'$(TestHangTimeout)' == ''">10m</_TestHangTimeout>
+      <_UncollectedTestsSessionTimeout Condition="'$(UncollectedTestsSessionTimeout)' != ''">$(UncollectedTestsSessionTimeout)</_UncollectedTestsSessionTimeout>
+      <_UncollectedTestsSessionTimeout Condition="'$(UncollectedTestsSessionTimeout)' == ''">15m</_UncollectedTestsSessionTimeout>
+      <_UncollectedTestsHangTimeout Condition="'$(UncollectedTestsHangTimeout)' != ''">$(UncollectedTestsHangTimeout)</_UncollectedTestsHangTimeout>
+      <_UncollectedTestsHangTimeout Condition="'$(UncollectedTestsHangTimeout)' == ''">10m</_UncollectedTestsHangTimeout>
+
+      <!-- Build metadata JSON -->
+            <!-- Calculate short name (same logic as TestEnumerationRunsheetBuilder) -->
+      <_ShortName>$([System.IO.Path]::GetFileNameWithoutExtension('$(MSBuildProjectName)').Replace('Aspire.', '').Replace('.Tests', ''))</_ShortName>
 
       <!-- Build metadata JSON -->
       <_MetadataJson>{
   "projectName": "$(MSBuildProjectName)",
+  "shortName": "$(_ShortName)",
   "testClassNamesPrefix": "$(MSBuildProjectName)",
   "testProjectPath": "$(_RelativeProjectPath)",
   "requiresNugets": "$(_RequiresNugets.ToLowerInvariant())",
@@ -234,9 +243,13 @@
 
     <!-- Create helix directory and write metadata file -->
     <MakeDir Directories="$(_HelixDir)" />
-    <WriteLinesToFile File="$(_MetadataFile)"
-                      Lines="$(_MetadataJson)"
-                      Overwrite="true" />
+        <WriteLinesToFile File="$(TestMetadataFile)" Overwrite="true" Lines="{
+  &quot;projectName&quot;: &quot;$(AssemblyName)&quot;,
+  &quot;testProjectPath&quot;: &quot;$(MSBuildProjectFullPath)&quot;,
+  &quot;supportedOSes&quot;: [$(SupportedOSesJson)],
+  &quot;testSessionTimeout&quot;: &quot;20m&quot;,
+  &quot;testHangTimeout&quot;: &quot;10m&quot;
+}" />
 
     <Message Text="Wrote test metadata: $(_MetadataFile) (requiresNugets=$(_RequiresNugets), requiresTestSdk=$(_RequiresTestSdk), enablePlaywright=$(_EnablePlaywrightInstall), supportedOSes=$(_SupportedOSesJson), path=$(_RelativeProjectPath))" Importance="Low" />
   </Target>

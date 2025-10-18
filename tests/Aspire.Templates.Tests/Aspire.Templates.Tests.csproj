@@ -23,8 +23,8 @@
     <EnablePlaywrightInstallForSplitTests>true</EnablePlaywrightInstallForSplitTests>
 
     <!-- Timeout configuration -->
-    <SplitTestSessionTimeout>20m</SplitTestSessionTimeout>
-    <SplitTestHangTimeout>12m</SplitTestHangTimeout>
+    <TestSessionTimeout>20m</TestSessionTimeout>
+    <TestHangTimeout>15m</TestHangTimeout>
 
     <!--
       FIXME: https://github.com/dotnet/aspire/issues/8488
