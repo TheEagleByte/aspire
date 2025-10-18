@@ -80,8 +80,7 @@
       <_InitialMetadataLines Include="  &quot;testSessionTimeout&quot;: &quot;$(TestSessionTimeout)&quot;," />
       <_InitialMetadataLines Include="  &quot;testHangTimeout&quot;: &quot;$(TestHangTimeout)&quot;," />
       <_InitialMetadataLines Include="  &quot;uncollectedTestsSessionTimeout&quot;: &quot;$(UncollectedTestsSessionTimeout)&quot;," />
-      <_InitialMetadataLines Include="  &quot;uncollectedTestsHangTimeout&quot;: &quot;$(UncollectedTestsHangTimeout)&quot;," />
-      <_InitialMetadataLines Include="  &quot;enablePlaywrightInstall&quot;: &quot;$(EnablePlaywrightInstallForSplitTests)&quot;" />
+      <_InitialMetadataLines Include="  &quot;uncollectedTestsHangTimeout&quot;: &quot;$(UncollectedTestsHangTimeout)&quot;" />
       <_InitialMetadataLines Include="}" />
     </ItemGroup>
 

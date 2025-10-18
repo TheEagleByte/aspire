@@ -93,7 +93,6 @@ function New-RegularTestEntry {
     if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
     if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
     if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-    if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
     if ($Metadata.PSObject.Properties['extraTestArgs'] -and $Metadata.extraTestArgs) { $entry['extraTestArgs'] = $Metadata.extraTestArgs }
   }
 
@@ -147,7 +146,6 @@ function New-CollectionTestEntry {
 
   if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
   if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-  if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
 
   # Add test filter for collection-based splitting
   if ($IsUncollected) {
@@ -191,7 +189,6 @@ function New-ClassTestEntry {
   if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
   if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
   if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-  if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
 
   # Add test filter for class-based splitting
   $entry['extraTestArgs'] = "--filter-class `"$ClassName`""
