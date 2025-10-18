@@ -89,12 +89,12 @@ function New-RegularTestEntry {
 
   # Add metadata if available
   if ($Metadata) {
-    if ($Metadata.testSessionTimeout) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
-    if ($Metadata.testHangTimeout) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
-    if ($Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
-    if ($Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-    if ($Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
-    if ($Metadata.extraTestArgs) { $entry['extraTestArgs'] = $Metadata.extraTestArgs }
+    if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
+    if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
+    if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
+    if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
+    if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
+    if ($Metadata.PSObject.Properties['extraTestArgs'] -and $Metadata.extraTestArgs) { $entry['extraTestArgs'] = $Metadata.extraTestArgs }
   }
 
   # Add supported OSes
@@ -129,25 +129,25 @@ function New-CollectionTestEntry {
 
   # Use uncollected timeouts if available, otherwise use regular
   if ($IsUncollected) {
-    if ($Metadata.uncollectedTestsSessionTimeout) {
+    if ($Metadata.PSObject.Properties['uncollectedTestsSessionTimeout']) {
       $entry['testSessionTimeout'] = $Metadata.uncollectedTestsSessionTimeout
-    } elseif ($Metadata.testSessionTimeout) {
+    } elseif ($Metadata.PSObject.Properties['testSessionTimeout']) {
       $entry['testSessionTimeout'] = $Metadata.testSessionTimeout
     }
 
-    if ($Metadata.uncollectedTestsHangTimeout) {
+    if ($Metadata.PSObject.Properties['uncollectedTestsHangTimeout']) {
       $entry['testHangTimeout'] = $Metadata.uncollectedTestsHangTimeout
-    } elseif ($Metadata.testHangTimeout) {
+    } elseif ($Metadata.PSObject.Properties['testHangTimeout']) {
       $entry['testHangTimeout'] = $Metadata.testHangTimeout
     }
   } else {
-    if ($Metadata.testSessionTimeout) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
-    if ($Metadata.testHangTimeout) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
+    if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
+    if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
   }
 
-  if ($Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
-  if ($Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-  if ($Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
+  if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
+  if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
+  if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
 
   # Add test filter for collection-based splitting
   if ($IsUncollected) {
@@ -157,7 +157,7 @@ function New-CollectionTestEntry {
   }
 
   # Add supported OSes from metadata (should match enumeration)
-  if ($Metadata.supportedOSes) {
+  if ($Metadata.PSObject.Properties['supportedOSes']) {
     $entry['supportedOSes'] = @($Metadata.supportedOSes)
   }
 
@@ -187,17 +187,17 @@ function New-ClassTestEntry {
     classname = $ClassName
   }
 
-  if ($Metadata.testSessionTimeout) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
-  if ($Metadata.testHangTimeout) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
-  if ($Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
-  if ($Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
-  if ($Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
+  if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
+  if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
+  if ($Metadata.PSObject.Properties['requiresNugets'] -and $Metadata.requiresNugets -eq 'true') { $entry['requiresNugets'] = 'true' }
+  if ($Metadata.PSObject.Properties['requiresTestSdk'] -and $Metadata.requiresTestSdk -eq 'true') { $entry['requiresTestSdk'] = 'true' }
+  if ($Metadata.PSObject.Properties['enablePlaywrightInstall'] -and $Metadata.enablePlaywrightInstall -eq 'true') { $entry['enablePlaywrightInstall'] = 'true' }
 
   # Add test filter for class-based splitting
   $entry['extraTestArgs'] = "--filter-class `"$ClassName`""
 
   # Add supported OSes from metadata
-  if ($Metadata.supportedOSes) {
+  if ($Metadata.PSObject.Properties['supportedOSes']) {
     $entry['supportedOSes'] = @($Metadata.supportedOSes)
   }
 

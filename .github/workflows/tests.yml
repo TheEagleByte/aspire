@@ -32,7 +32,7 @@ jobs:
 
   tests_no_nugets:
     uses: ./.github/workflows/run-tests.yml
-    name: Tests (No Nugets)
+    name: Tests
     needs: setup_for_tests
     if: ${{ fromJson(needs.setup_for_tests.outputs.tests_matrix_no_nugets).include[0] != null }}
     strategy:
